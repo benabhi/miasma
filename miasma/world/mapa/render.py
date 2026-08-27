@@ -14,7 +14,7 @@ completamente abiertas, quedan pegadas y el mapa se lee como una calle.
 
 from evennia.utils import ansi
 
-from world.mapa import iconos
+from world.mapa import iconos, ubicaciones
 
 # Desplazamiento en la grilla de cada dirección cardinal.
 DESPLAZAMIENTOS = {
@@ -152,12 +152,46 @@ def dibujar(sala_actual, radio=3, enmarcar=True, recortar=True):
     if not grilla:
         return ([], set())
 
+    # El terreno intransitable —agua, arboleda, muro— no son salas, pero se
+    # dibujan igual: si se dejaran en blanco, el mapa parecería agujereado
+    # cuando en realidad ahí hay lago.
+    try:
+        terreno = {
+            pos: tipo
+            for pos, tipo in ubicaciones.celdas_de(plano, cz).items()
+            if tipo in iconos.INTRANSITABLES
+        }
+    except (KeyError, ValueError):
+        terreno = {}
+
     x_desde, x_hasta = cx - radio, cx + radio
     y_desde, y_hasta = cy - radio, cy + radio
 
+    if not recortar:
+        # Ventana de tamaño fijo: se corre para no asomarse fuera del plano.
+        # Sin esto, al caminar por el borde del mundo el minimapa muestra
+        # filas en blanco, que es justo lo que no queremos. Es la misma idea
+        # que una cámara con límites.
+        conocidas = set(grilla) | set(terreno)
+        min_x = min(x for x, _ in conocidas)
+        max_x = max(x for x, _ in conocidas)
+        min_y = min(y for _, y in conocidas)
+        max_y = max(y for _, y in conocidas)
+        ancho = 2 * radio
+        if max_x - min_x >= ancho:
+            x_desde = max(min_x, min(x_desde, max_x - ancho))
+            x_hasta = x_desde + ancho
+        else:
+            x_desde, x_hasta = min_x, max_x
+        if max_y - min_y >= ancho:
+            y_desde = max(min_y, min(y_desde, max_y - ancho))
+            y_hasta = y_desde + ancho
+        else:
+            y_desde, y_hasta = min_y, max_y
+
     ocupadas = [
         (x, y)
-        for (x, y) in grilla
+        for (x, y) in set(grilla) | set(terreno)
         if x_desde <= x <= x_hasta and y_desde <= y <= y_hasta
     ]
     if not ocupadas:
@@ -185,7 +219,12 @@ def dibujar(sala_actual, radio=3, enmarcar=True, recortar=True):
         for x in range(x_desde, x_hasta + 1):
             sala = grilla.get((x, y))
             if not sala:
-                fila.append(iconos.ICONO_VACIO)
+                tipo = terreno.get((x, y))
+                if tipo:
+                    tipos.add(tipo)
+                    fila.append(iconos.icono_de(tipo))
+                else:
+                    fila.append(iconos.ICONO_VACIO)
             elif sala == centro:
                 # El jugador va encima de su celda. Si está en un interior
                 # anclado, el marcador cae igual sobre la calle de entrada.
@@ -205,10 +244,14 @@ def dibujar(sala_actual, radio=3, enmarcar=True, recortar=True):
         if y == y_desde:
             continue
         separadores = [muro_horizontal(x, y) for x in range(x_desde, x_hasta + 1)]
-        if not any(separadores) and recortar:
-            # Con la ventana recortada se saltean las filas totalmente
-            # abiertas, y el mapa queda compacto. Con ventana fija no: la
-            # altura tiene que ser siempre la misma.
+        if not any(separadores):
+            # Una fila separadora sin un solo muro es una línea en blanco:
+            # ocupa alto y no dice nada. Si dos filas están completamente
+            # abiertas, van pegadas y el mapa se lee como una calle.
+            #
+            # El alto del minimapa varía por esto, y está bien: lo que no
+            # puede cambiar es el ancho, que es lo que correría la columna de
+            # texto de `mirar`.
             continue
         sep = []
         for i, x in enumerate(range(x_desde, x_hasta + 1)):

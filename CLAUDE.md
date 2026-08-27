@@ -58,9 +58,19 @@ settings. `docs/MAPA.md` tiene la traza completa y el formato de los datos.
 Nunca crear salas del mapa con `dig`/`tunnel` in-game: la próxima
 reconstrucción no las va a conocer y quedan colgadas.
 
-Toda sala nueva necesita entrada en `world/mapa/ubicaciones.py`: o una celda
-propia en `UBICACIONES`, o un tipo en `ANCLADAS` si es un interior de una
-sola sala. El validador del constructor no deja construir sin eso.
+El mundo es una grilla densa dibujada como imágenes de texto en
+`world/mapa/ubicaciones.py`, un carácter por celda. **Las salidas
+norte/sur/este/oeste no se escriben**: el constructor conecta cada celda con sus
+vecinas. En `CONEXIONES` solo van las salidas que no son de grilla (entrar a un
+local, subir un piso, cruzar de plano).
+
+Toda sala nueva necesita su celda en el dibujo y una entrada en `NOMBRADAS`, o
+un tipo en `ANCLADAS` si es un interior de una sola sala. El validador no deja
+construir sin eso.
+
+Los caracteres del mapa son CP437 + ASCII a propósito: las fuentes de los
+clientes MUD no cubren los bloques Unicode bonitos y salían cuadraditos vacíos.
+No meter emoji: ocupan dos columnas y descuadran la grilla.
 
 ## Diseño
 

@@ -1,16 +1,16 @@
-# El mapa de pruebas: Silent Hill
+# El mundo: Silent Hill
 
 Escenario de pruebas de Miasma: una reconstrucción de la ciudad de *Silent Hill*
 (Konami, 1999). No es contenido definitivo — es un mundo conocido y de tamaño
 razonable sobre el que probar cada sistema nuevo a medida que se incorpora.
 
-**104 salas, 238 salidas, 7 distritos.** El juego arranca en el Café 5to2.
+**116 salas, 311 salidas, 5 planos.** El juego arranca en el Café 5to2.
 
 ---
 
 ## Reconstruirlo
 
-Todo el mapa se genera desde datos. Reconstruirlo es un comando, y es
+Todo el mundo se genera desde datos. Reconstruirlo es un comando, y es
 idempotente: borra lo que dejó la corrida anterior y levanta todo de cero.
 
 Desde el juego, como superusuario:
@@ -43,6 +43,65 @@ importa. Como es un archivo de settings, un `evennia reload` no alcanza.
 
 ---
 
+## La grilla
+
+El mundo es **una grilla densa**: cada celda es una sala por la que se camina, o
+terreno que se dibuja pero no se pisa (agua, arboleda, muro). No hay huecos. Se
+puede ir de una punta del pueblo a la otra caminando en cualquier dirección.
+
+Cada plano se dibuja como una imagen de texto en `world/mapa/ubicaciones.py`,
+un carácter por celda:
+
+```python
+PUEBLO = """
+Tdcld~~TTTT
+hdchs~~TTTT
+ldchs~~TTTT
+hdEgg~~cPsT
+esEiappsHeT
+TTTTT~~eeeT
+TTTTT~~dVaT
+~~~~~~~vva*
+~~~~~~~vasT
+~~~~~~~!MhT
+~~~~~~~&pcT
+"""
+```
+
+La primera línea es la del norte y el primer carácter de cada línea el del
+oeste, así que la imagen se lee como el mapa. `LEYENDA` traduce cada carácter a
+un tipo de sala.
+
+**Las salidas norte/sur/este/oeste no se escriben.** El constructor conecta cada
+celda con sus vecinas ortogonales. Lo que sí se declara a mano en `CONEXIONES`
+son las salidas que no son de grilla: entrar a un negocio (`café`, `iglesia`),
+subir un piso (`arriba`), cruzar de plano (`escuela`, `hospital`). Una salida
+escrita a mano siempre le gana a la automática.
+
+### Salas con nombre y salas de relleno
+
+- Las salas escritas en `silent_hill.py` reclaman su celda en `NOMBRADAS`, y
+  usan su nombre y su descripción propios. Son 79.
+- Las celdas que no reclamó nadie las llena el constructor con salas genéricas
+  según el tipo, desde la tabla `RELLENO` ("Calzada", "Baldío", "Casa
+  abandonada"…). Son 12. Existen para que la grilla quede densa sin tener que
+  escribir doscientas descripciones; el detalle está en las salas con nombre.
+- `ANCLADAS` son los interiores de una sola sala. No ocupan celda: dibujar un
+  mapa de 1×1 para el interior de un bar no le sirve a nadie, así que cuando el
+  jugador está adentro se dibuja la calle de la que entró, con la marca sobre
+  esa celda. Son 25, y el constructor resuelve el ancla solo mirando de dónde
+  se entra.
+
+### El agua no es una sala
+
+El lago Toluca, el canal del puente levadizo y las paredes interiores se
+dibujan (`~`, `█`) pero no son salas. La alternativa —hacerlos caminables— sería
+peor: un MUD de supervivencia donde se camina sobre el lago no es más denso, es
+menos creíble. El vacío del mapa se llena con terreno visible, no con salas
+imposibles.
+
+---
+
 ## El minimapa
 
 Cada `mirar` sale en dos columnas: el minimapa a la izquierda, el nombre y la
@@ -51,50 +110,29 @@ y las cosas. Se redibuja solo en cada movimiento, porque lo arma
 `Room.return_appearance()` (`typeclasses/rooms.py`).
 
 ```
-┌─────────┐   Ellroy St. y Midwich St.
-│  ˙ ░ ⌂ ▤│
-│         │   La niebla lo come todo a diez metros. Cae ceniza, mansa...
-│· ˙ ░ ⌂ ▤│
-│         │   El paredón perimetral de la Escuela Primaria Midwich corre
-│  ˙ ⦿ ▦ ▦│   a lo largo de toda la vereda sur: ladrillo, tres metros...
-│         │
-└─────────┘
-Salidas: oeste, este, norte, sur y escuela
+┌─────────┐   Finney St. y Bachman Rd.
+│░ : . ~ ~│
+│░ n @ ~ ~│   La niebla lo come todo a diez metros. Cae ceniza, mansa, como
+│░ n $ ~ ~│   nieve sucia.
+│E % % ~ ~│
+│E + ▓ = =│   El cruce más transitado del barrio viejo, en otra vida. Un
+└─────────┘   semáforo cuelga muerto sobre el medio de la calle y se mece sin
+              viento.
+Salidas: oeste, norte, sur, café y tienda
 ```
 
 `mapa` (alias `map`) muestra el plano entero con una referencia de símbolos.
 Acepta un radio: `mapa 5`.
 
-### De dónde salen los iconos
+### Ancho fijo, alto variable
 
-`world/mapa/iconos.py` mapea **tipos** de sala a caracteres. Se trabaja con
-tipos y no con caracteres sueltos para poder cambiar la estética del mapa desde
-un solo lugar. Hay iconos para calles, avenidas, puentes, callejones,
-descampados, comercios, casas, edificios, iglesia, escuela, hospital,
-comisaría, hotel, industria, interiores, pasillos, escaleras, sótanos, azoteas,
-agua, muelle, faro, alcantarillas y atracciones.
+El minimapa usa una ventana de tamaño fijo que se corre para no asomarse fuera
+del plano, como una cámara con límites. Si se recortara a lo que existe, el
+ancho cambiaría de sala en sala y la columna de texto bailaría a cada paso.
 
-**Todos los caracteres son de ancho simple.** Los emoji (🌲, 🏠) ocupan dos
-columnas en la mayoría de las terminales y descuadran la grilla entera, así que
-están descartados por más lindos que sean.
-
-### De dónde sale la grilla
-
-`world/mapa/ubicaciones.py` dice dónde cae cada sala. Dos formas:
-
-- **`UBICACIONES`** — salas con celda propia: `(plano, x, y, z, tipo)`. Un
-  *plano* es un mapa independiente (`pueblo`, `escuela`, `hospital`, `cloacas`,
-  `parque`); dentro de él, `x` crece al este, `y` al norte y `z` es el piso.
-- **`ANCLADAS`** — interiores de una sola sala: solo el `tipo`. No ocupan
-  celda. Dibujar un mapa de una celda para el interior de un bar no le sirve a
-  nadie, así que cuando el jugador está adentro el minimapa muestra la calle de
-  la que se entra, con la marca sobre esa celda. El constructor resuelve el
-  ancla solo, mirando de dónde se entra.
-
-El pueblo entero —Old Silent Hill, Central y el área turística— es **un solo
-plano continuo**, así que caminando de punta a punta se ve cómo encaja la
-ciudad. La escuela, el hospital, las alcantarillas y el parque tienen plano
-propio.
+El **alto** sí varía: entre dos filas de celdas se dibuja una fila separadora
+solo si tiene algún muro. Una fila separadora sin muros es una línea en blanco
+que ocupa alto y no dice nada.
 
 ### Los muros los dicen las salidas, no los datos
 
@@ -103,17 +141,26 @@ reales** de cada sala. Entre dos celdas contiguas pone un espacio si hay paso y
 un muro si no. Si abrís un pasaje nuevo in-game, el mapa lo refleja sin tocar
 ningún dato.
 
-Un muro solo se dibuja entre dos salas que existen y no se comunican. Si de un
-lado no hay nada, el mapa termina ahí: el vacío ya dice que no se puede seguir,
-y llenarlo de muros lo vuelve ilegible.
+Un muro solo se dibuja entre dos salas que existen y no se comunican.
 
-### Toda sala necesita un tipo
+### Sobre los caracteres
 
-`Room.at_object_creation()` le pone `tipo_mapa = "interior"` a cualquier sala
-que no lo traiga, y el validador del constructor rechaza el build si una sala
-no está ni en `UBICACIONES` ni en `ANCLADAS`, si está en las dos, o si dos
-salas se pisan en la misma celda. Una sala sin tipo se dibuja como `?`, para
-que salte a la vista.
+La primera versión usaba formas geométricas y símbolos lindos (`▤ ▣ ✚ ⦿ † ◊`) y
+en la práctica salían cuadraditos vacíos: las fuentes monoespaciadas que usan
+los clientes MUD no cubren esos bloques Unicode. Un mapa ilegible no sirve por
+más elegante que sea el carácter, así que `world/mapa/iconos.py` se limita a:
+
+- **bloques de sombreado** (`░ ▒ ▓ █`) y **dibujo de cajas** (`─ │ ═ ║ ╬`), que
+  vienen de CP437 y están en cualquier fuente monoespaciada;
+- **ASCII puro** para todo lo demás, al estilo de los roguelikes: `#` edificio,
+  `$` comercio, `+` iglesia, `@` el jugador.
+
+Si algún día usás una fuente con buena cobertura Unicode (Fira Code, Cascadia,
+DejaVu Sans Mono), cambiar `iconos.py` alcanza para volver a los símbolos
+bonitos: nada más lee esos caracteres.
+
+Los emoji quedan descartados siempre, con cualquier fuente: ocupan dos columnas
+y descuadran la grilla entera.
 
 ---
 
@@ -121,16 +168,17 @@ que salte a la vista.
 
 | Archivo | Qué es |
 |---|---|
-| `world/mapa/silent_hill.py` | **Los datos.** Salas, descripciones y conexiones. Es acá donde se agrega contenido. |
-| `world/mapa/ubicaciones.py` | **La geometría.** Dónde cae cada sala y con qué tipo se dibuja. |
-| `world/mapa/iconos.py` | El catálogo de tipos a caracteres, y los muros. |
+| `world/mapa/ubicaciones.py` | **La grilla.** El dibujo de cada plano, qué sala ocupa cada celda y con qué rellenar las que sobran. |
+| `world/mapa/silent_hill.py` | **Los textos.** Nombres, descripciones y las conexiones que no son de grilla. |
+| `world/mapa/iconos.py` | Tipos de sala a caracteres, y los muros. |
 | `world/mapa/render.py` | Dibuja el mapa recorriendo las salidas reales. |
-| `world/mapa/constructor.py` | **La lógica.** Valida, borra el mapa anterior, construye el nuevo, escribe los dbrefs. |
+| `world/mapa/constructor.py` | Valida, borra el mundo anterior, construye el nuevo, escribe los dbrefs. |
 | `world/batch/silent_hill.py` | Punto de entrada del batchprocessor. Tres líneas. |
 
-### Agregar una sala
+### Agregar una sala con nombre propio
 
-En `silent_hill.py`, una entrada en `SALAS`:
+1. En `ubicaciones.py`, poner el carácter de su tipo en la celda del dibujo.
+2. En `silent_hill.py`, la entrada en `SALAS`:
 
 ```python
 SALAS["int_farmacia"] = {
@@ -141,32 +189,29 @@ SALAS["int_farmacia"] = {
 }
 ```
 
-y al menos una tupla en `CONEXIONES`:
+3. En `ubicaciones.py`, reclamar la celda:
 
 ```python
-CONEXIONES += [
-    ("osh_bloch_midwich", "farmacia", "int_farmacia", "fuera"),
-]
+NOMBRADAS["int_farmacia"] = ("pueblo", 2, 6, 0)
 ```
 
-Cada tupla es `(origen, salida_ida, destino, salida_vuelta)`. Si el nombre de la
-salida está en `DIRECCIONES` (`norte`, `sur`, `arriba`, `dentro`…) hereda sus
-alias automáticamente; si no, es una salida con nombre propio y los alias se
-separan con `|`: `"café|cafe|5to2"`. Un `None` como salida de vuelta crea un
-pasaje de una sola mano.
+Si es un interior de una sola sala, en vez del paso 3 va en `ANCLADAS` con su
+tipo, y en `CONEXIONES` la salida con nombre que lleva hasta ahí.
+
+**No hace falta declarar norte/sur/este/oeste**: eso lo hace el constructor.
 
 ### Las validaciones
 
-`constructor.validar()` corre antes de tocar la base y aborta sin construir
-nada si encuentra:
+`constructor.validar()` corre antes de tocar la base y aborta sin construir nada
+si encuentra:
 
-- salas inexistentes en una conexión,
+- un carácter del dibujo que no está en `LEYENDA`,
+- un tipo transitable sin entrada en `RELLENO`,
+- una sala con nombre que cae fuera del dibujo, sobre agua, o encima de otra,
+- una sala escrita que no está ni en `NOMBRADAS` ni en `ANCLADAS`, o que está en
+  las dos,
 - dos salidas con el mismo nombre en la misma sala,
-- salas sin ninguna conexión,
-- salas inalcanzables caminando desde el punto de partida,
-- salas que no están ni en `UBICACIONES` ni en `ANCLADAS`, o que están en las
-  dos,
-- dos salas peleándose la misma celda del mapa.
+- cualquier sala inalcanzable caminando desde el punto de partida.
 
 ### Qué se borra y qué no
 
@@ -186,72 +231,34 @@ de calles, comercios y salas interiores son los del juego. La topología es una
 simplificación navegable: las calles se representan por sus cruces, no metro a
 metro.
 
-### Old Silent Hill (29 salas)
-
-Grilla de cuatro por cuatro. Bachman Road es la arteria que atraviesa todo el
-pueblo de norte a sur.
-
-```
-              Bradbury   Midwich    Levin     Bachman
-                 │          │         │          │
-  Finney  ───────┼──────────┼─────────┼──────────┼─── (norte: puente roto)
-                 │          │         │          │     Café 5to2 · tienda
-  Matheson ──────┼──────────┼─────────┼──────────┼───  Queen Burger · casilla
-                 │          │         │          │
-  Ellroy  ───────┼──────────┼─────────┼──────────┼───  estación de servicio
-                 │       ESCUELA      │          │
-  Bloch   ───────┼──────────┼─────────┼──────────┴──→ puente levadizo
-              Cut-Rite            Iglesia Balkan            │
-                                                            ↓
-                                                     Central Silent Hill
-```
-
-Interiores: Café 5to2 (inicio), tienda de conveniencia, Queen Burger, casa de
-Levin Street, casa de K. Gordon, Iglesia Balkan, Cut-Rite Chain Saws, taller de
-la estación de servicio, torre de control del puente, cancha de básquet.
-
-### Midwich Elementary School (15 salas)
-
-Planta baja alrededor del patio con la torre del reloj; primer piso con
-laboratorio de química, sala de música y biblioteca; sótano con la caldera;
-azotea.
-
-### Central Silent Hill (17 salas)
-
-Grilla de cuatro por tres.
+El pueblo entero es **un solo plano continuo**: Old Silent Hill al noroeste, el
+canal en el medio con el puente levadizo, el centro al este y el área turística
+bajando hacia el lago Toluca.
 
 ```
-              Simmons     Sagan     Bachman
-                 │          │          │
-  Crichton ──────┼──────────┼──────────┼───  comisaría · Green Lion
-                 │          │          │
-  Koontz  ───────┼──────────┼──────────┼───  Café Sun · HOSPITAL
-                 │          │          │
-  Munson  ───────┼──────────┼──────────┼───  Town Center
-                 │          │          │
-  Katz    ───────┴──────────┴──────────┴──→ (sur: área turística)
-                        alcantarillas
+         Old Silent Hill    canal    Central       parque
+   y10   T . ░ : .          ~ ~      T T T T
+    y9   n . ░ n $          ~ ~      T T T T
+    y8   : . ░ n $          ~ ~      T T T T
+    y7   n . E % %          ~ ~      ░ P $  T
+    y6   # $ E + ▓          = =      $ H #  T    <- puente levadizo
+    y5   T T T T T          ~ ~      # # #  T
+    y4   T T T T T          ~ ~      . v ▓  T
+    y3        lago Toluca             , , ▓ *    <- entrada al parque
+    y2                                , ▓ $ T
+    y1                                ! M n T
+    y0                                & = ░ T
 ```
 
-### Hospital Alchemilla (14 salas)
+La escuela, el hospital, las alcantarillas y el parque tienen plano propio, con
+sus niveles:
 
-Planta baja completa (recepción, guardia, farmacia, consultorio, dirección,
-cocina), subsuelo con el generador, y pisos 2 y 3 por ascensor.
-
-### Las alcantarillas (7 salas)
-
-Unen Katz St. con el área turística. Pozo de acceso, túneles, cruce de
-galerías, oficina de mantenimiento, pasarela superior.
-
-### Silent Hill Resort Area (17 salas)
-
-Craig, Weaver, Nathan Ave, Bartlett y Sandford, sobre la costa del lago Toluca.
-Annie's Bar, Indian Runner, Motel Haerbey Inn, Pete's Bowl-O-Rama, Lakeview
-Hotel, el muelle y el faro.
-
-### Lakeside Amusement Park (5 salas)
-
-Explanada, heladería, vuelta al mundo, montaña rusa y calesita.
+| Plano | Niveles | Qué tiene |
+|---|---|---|
+| Escuela Midwich | sótano, PB, 1º, azotea | patio con torre de reloj, laboratorio, sala de música, biblioteca, caldera |
+| Hospital Alchemilla | −2 a +2 | planta baja completa, sala de máquinas, pisos por ascensor |
+| Alcantarillas | −1 y 0 | túneles, cruce de galerías, oficina, pasarela superior |
+| Lakeside Amusement Park | 0 | calesita, vuelta al mundo, montaña rusa, heladería |
 
 ---
 
@@ -264,9 +271,10 @@ Explanada, heladería, vuelta al mundo, montaña rusa y calesita.
   juego original están cerradas con llave (la azotea de la escuela, la reja de
   las alcantarillas, Indian Runner) están descritas como cerradas pero se
   cruzan igual.
-- No hay objetos ni NPCs. El mapa es geografía pura.
+- No hay objetos ni NPCs. El mundo es geografía pura.
 - El minimapa no marca las escaleras: si una sala tiene salidas hacia otro
   nivel, hay que entrar para enterarse. `mapa` sí dice en qué nivel estás y
   cuántos tiene el plano.
-- El interior de la escuela y del hospital está resumido: hay una sala por zona
-  significativa, no una por aula o consultorio.
+- Las 12 salas de relleno comparten descripción por tipo: hay tres "Calzada"
+  idénticas. A medida que el pueblo importe, conviene irlas ascendiendo a salas
+  con nombre propio.

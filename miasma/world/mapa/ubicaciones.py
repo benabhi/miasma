@@ -1,141 +1,300 @@
 # -*- coding: utf-8 -*-
 """
-Dónde cae cada sala en el mapa, y con qué icono se dibuja.
+La grilla del mundo: qué hay en cada celda de cada plano.
 
-Está separado de `silent_hill.py` a propósito: ahí van los nombres y las
-descripciones, acá la geometría. Se pueden tocar por separado.
+Cada plano se dibuja como una imagen de texto, un carácter por celda. Es la
+forma más directa de garantizar lo que queremos: **una grilla densa, sin
+huecos**. Si en el dibujo no queda un espacio en blanco, en el juego tampoco.
 
-Dos formas de aparecer en el mapa:
+    y crece hacia el norte  ->  la primera línea de la imagen es la de arriba
+    x crece hacia el este   ->  el primer carácter de cada línea es el oeste
 
-`UBICACIONES`
-    Salas con celda propia: `(plano, x, y, z, tipo)`. Un *plano* es un mapa
-    independiente —el pueblo, la escuela, el hospital, las cloacas, el
-    parque—; dentro de un plano, `x` crece hacia el este, `y` hacia el norte y
-    `z` es el piso.
+Casi todos los caracteres son salas por las que se camina, y el constructor las
+conecta automáticamente con sus vecinas ortogonales: no hay que declarar una
+sola salida norte/sur/este/oeste a mano. Los tipos de `iconos.INTRANSITABLES`
+—agua, arboleda, muro— se dibujan pero no son salas: son el borde del mundo,
+no un agujero.
 
-`ANCLADAS`
-    Interiores de una sola sala: `tipo`. No ocupan celda. Dibujar un mapa de
-    una celda para el interior de un bar no le sirve a nadie, así que cuando el
-    jugador está adentro el minimapa muestra la calle de la que se entra, con
-    la marca del jugador sobre esa celda. El constructor resuelve el ancla
-    sola, mirando de dónde se entra.
+Las salas con nombre y descripción propios (las de `silent_hill.py`) reclaman
+su celda en `NOMBRADAS`. Las demás celdas las llena el constructor con salas
+genéricas según su tipo, para que el pueblo sea caminable de punta a punta sin
+tener que escribir doscientas descripciones.
 
-Los edificios que sí tienen varias salas (escuela, hospital, cloacas, parque)
-tienen su propio plano y se recorren con su propio mapa.
+`ANCLADAS` son los interiores de una sola sala. No ocupan celda: dibujar un
+mapa de 1×1 para el interior de un bar no le sirve a nadie, así que cuando el
+jugador está adentro se dibuja la calle de la que entró.
 """
+
+# --------------------------------------------------------------------------
+# Qué significa cada carácter de los dibujos
+# --------------------------------------------------------------------------
+
+LEYENDA = {
+    "c": "calle",
+    "x": "cruce",
+    "a": "avenida",
+    "v": "vereda",
+    "p": "puente",
+    "l": "callejon",
+    "d": "descampado",
+    "e": "edificio",
+    "h": "casa",
+    "s": "comercio",
+    "i": "iglesia",
+    "E": "escuela",
+    "H": "hospital",
+    "P": "comisaria",
+    "M": "hotel",
+    "g": "industria",
+    "o": "interior",
+    "-": "pasillo",
+    "X": "escalera",
+    "u": "sotano",
+    "^": "azotea",
+    "*": "atraccion",
+    "&": "muelle",
+    "!": "faro",
+    "V": "alcantarilla",
+    "~": "agua",
+    "T": "arbol",
+    "#": "muro",
+}
 
 # --------------------------------------------------------------------------
 # EL PUEBLO
 #
-# Un solo plano continuo, de Old Silent Hill al lago. La grilla de calles:
+# Old Silent Hill al noroeste, el canal en el medio con el puente levadizo, el
+# centro al este y el área turística bajando hacia el lago Toluca. Un solo
+# plano continuo: se camina de punta a punta.
 #
-#     Old Silent Hill          Central              Área turística
-#     x: Bradbury 0            x: Simmons  6        x: 6..9
-#        Midwich  1               Sagan    7        y: 0..3
-#        Levin    2               Bachman  8
-#        Bachman  3            y: Katz     4
-#     y: Bloch    6               Munson   5
-#        Ellroy   7               Koontz   6
-#        Matheson 8               Crichton 7
-#        Finney   9
-#
-# El tipo de cada cruce es el del lugar que lo define: la esquina del café es
-# "comercio", la que da al paredón de la escuela es "escuela". No es que la
-# calle sea un negocio: es que en el mapa lo que importa es qué hay ahí.
+#       x  0 1 2 3 4 5 6 7 8 9 10
 # --------------------------------------------------------------------------
 
-UBICACIONES = {
+PUEBLO = """
+Tdcld~~TTTT
+hdchs~~TTTT
+ldchs~~TTTT
+hdEgg~~cPsT
+esEiappsHeT
+TTTTT~~eeeT
+TTTTT~~dVaT
+~~~~~~~vva*
+~~~~~~~vasT
+~~~~~~~!MhT
+~~~~~~~&pcT
+"""
+
+ESCUELA_PB = """
+---
+-d-
+#o#
+#c#
+"""
+
+ESCUELA_1P = """
+o-#
+-o#
+o##
+###
+"""
+
+ESCUELA_AZOTEA = """
+###
+^##
+###
+###
+"""
+
+ESCUELA_SOTANO = """
+###
+u##
+###
+###
+"""
+
+HOSPITAL_PB = """
+###o
+oooo
+ooo#
+#cX#
+"""
+
+HOSPITAL_1 = """
+####
+####
+####
+##-#
+"""
+
+HOSPITAL_2 = """
+####
+####
+####
+##-#
+"""
+
+HOSPITAL_SOTANO = """
+####
+####
+#X##
+####
+"""
+
+HOSPITAL_MAQUINAS = """
+####
+####
+#u##
+####
+"""
+
+CLOACAS = """
+#X
+#V
+oV
+#V
+#X
+"""
+
+CLOACAS_ALTO = """
+##
+##
+#V
+##
+##
+"""
+
+PARQUE = """
+T*T
+*d*
+TTT
+"""
+
+# plano -> {nivel z: dibujo}
+PLANOS = {
+    "pueblo": {"nombre": "Silent Hill", "niveles": {0: PUEBLO}},
+    "escuela": {
+        "nombre": "Escuela Midwich",
+        "niveles": {
+            -1: ESCUELA_SOTANO,
+            0: ESCUELA_PB,
+            1: ESCUELA_1P,
+            2: ESCUELA_AZOTEA,
+        },
+    },
+    "hospital": {
+        "nombre": "Hospital Alchemilla",
+        "niveles": {
+            -2: HOSPITAL_MAQUINAS,
+            -1: HOSPITAL_SOTANO,
+            0: HOSPITAL_PB,
+            1: HOSPITAL_1,
+            2: HOSPITAL_2,
+        },
+    },
+    "cloacas": {
+        "nombre": "Alcantarillas",
+        "niveles": {-1: CLOACAS, 0: CLOACAS_ALTO},
+    },
+    "parque": {"nombre": "Lakeside Amusement Park", "niveles": {0: PARQUE}},
+}
+
+NOMBRES_PLANO = {clave: spec["nombre"] for clave, spec in PLANOS.items()}
+
+# --------------------------------------------------------------------------
+# Qué sala con nombre propio ocupa cada celda
+# --------------------------------------------------------------------------
+
+NOMBRADAS = {
     # --- Old Silent Hill ---------------------------------------------------
-    "osh_finney_bradbury": ("pueblo", 0, 9, 0, "descampado"),
-    "osh_finney_midwich": ("pueblo", 1, 9, 0, "calle"),
-    "osh_finney_levin": ("pueblo", 2, 9, 0, "casa"),
-    "osh_finney_bachman": ("pueblo", 3, 9, 0, "comercio"),
-    "osh_matheson_bradbury": ("pueblo", 0, 8, 0, "descampado"),
-    "osh_matheson_midwich": ("pueblo", 1, 8, 0, "calle"),
-    "osh_matheson_levin": ("pueblo", 2, 8, 0, "casa"),
-    "osh_matheson_bachman": ("pueblo", 3, 8, 0, "comercio"),
-    "osh_ellroy_bradbury": ("pueblo", 0, 7, 0, "descampado"),
-    "osh_ellroy_midwich": ("pueblo", 1, 7, 0, "escuela"),
-    "osh_ellroy_levin": ("pueblo", 2, 7, 0, "industria"),
-    "osh_ellroy_bachman": ("pueblo", 3, 7, 0, "industria"),
-    "osh_bloch_bradbury": ("pueblo", 0, 6, 0, "comercio"),
-    "osh_bloch_midwich": ("pueblo", 1, 6, 0, "escuela"),
-    "osh_bloch_levin": ("pueblo", 2, 6, 0, "iglesia"),
-    "osh_bloch_bachman": ("pueblo", 3, 6, 0, "avenida"),
-    "osh_bachman_norte": ("pueblo", 3, 10, 0, "descampado"),
-    "osh_callejon_basket": ("pueblo", 2, 10, 0, "callejon"),
-    "osh_callejon_gordon": ("pueblo", -1, 8, 0, "callejon"),
-    "osh_puente_levadizo": ("pueblo", 4, 6, 0, "puente"),
+    "osh_callejon_gordon": ("pueblo", 0, 8, 0),
+    "osh_finney_bradbury": ("pueblo", 1, 9, 0),
+    "osh_finney_midwich": ("pueblo", 2, 9, 0),
+    "osh_finney_levin": ("pueblo", 3, 9, 0),
+    "osh_finney_bachman": ("pueblo", 4, 9, 0),
+    "osh_matheson_bradbury": ("pueblo", 1, 8, 0),
+    "osh_matheson_midwich": ("pueblo", 2, 8, 0),
+    "osh_matheson_levin": ("pueblo", 3, 8, 0),
+    "osh_matheson_bachman": ("pueblo", 4, 8, 0),
+    "osh_ellroy_bradbury": ("pueblo", 1, 7, 0),
+    "osh_ellroy_midwich": ("pueblo", 2, 7, 0),
+    "osh_ellroy_levin": ("pueblo", 3, 7, 0),
+    "osh_ellroy_bachman": ("pueblo", 4, 7, 0),
+    "osh_bloch_bradbury": ("pueblo", 1, 6, 0),
+    "osh_bloch_midwich": ("pueblo", 2, 6, 0),
+    "osh_bloch_levin": ("pueblo", 3, 6, 0),
+    "osh_bloch_bachman": ("pueblo", 4, 6, 0),
+    "osh_bachman_norte": ("pueblo", 4, 10, 0),
+    "osh_callejon_basket": ("pueblo", 3, 10, 0),
+    "osh_puente_levadizo": ("pueblo", 5, 6, 0),
     # --- Central Silent Hill -----------------------------------------------
-    "csh_cabecera_puente": ("pueblo", 5, 6, 0, "puente"),
-    "csh_crichton_simmons": ("pueblo", 6, 7, 0, "calle"),
-    "csh_crichton_sagan": ("pueblo", 7, 7, 0, "comisaria"),
-    "csh_crichton_bachman": ("pueblo", 8, 7, 0, "comercio"),
-    "csh_koontz_simmons": ("pueblo", 6, 6, 0, "comercio"),
-    "csh_koontz_sagan": ("pueblo", 7, 6, 0, "hospital"),
-    "csh_koontz_bachman": ("pueblo", 8, 6, 0, "edificio"),
-    "csh_munson_simmons": ("pueblo", 6, 5, 0, "edificio"),
-    "csh_munson_sagan": ("pueblo", 7, 5, 0, "edificio"),
-    "csh_munson_bachman": ("pueblo", 8, 5, 0, "edificio"),
-    "csh_katz_simmons": ("pueblo", 6, 4, 0, "descampado"),
-    "csh_katz_sagan": ("pueblo", 7, 4, 0, "alcantarilla"),
-    "csh_katz_bachman": ("pueblo", 8, 4, 0, "avenida"),
+    "csh_cabecera_puente": ("pueblo", 6, 6, 0),
+    "csh_crichton_simmons": ("pueblo", 7, 7, 0),
+    "csh_crichton_sagan": ("pueblo", 8, 7, 0),
+    "csh_crichton_bachman": ("pueblo", 9, 7, 0),
+    "csh_koontz_simmons": ("pueblo", 7, 6, 0),
+    "csh_koontz_sagan": ("pueblo", 8, 6, 0),
+    "csh_koontz_bachman": ("pueblo", 9, 6, 0),
+    "csh_munson_simmons": ("pueblo", 7, 5, 0),
+    "csh_munson_sagan": ("pueblo", 8, 5, 0),
+    "csh_munson_bachman": ("pueblo", 9, 5, 0),
+    "csh_katz_simmons": ("pueblo", 7, 4, 0),
+    "csh_katz_sagan": ("pueblo", 8, 4, 0),
+    "csh_katz_bachman": ("pueblo", 9, 4, 0),
     # --- Área turística ----------------------------------------------------
-    "res_bachman": ("pueblo", 8, 3, 0, "avenida"),
-    "res_craig": ("pueblo", 8, 2, 0, "comercio"),
-    "res_weaver": ("pueblo", 8, 1, 0, "casa"),
-    "res_nathan": ("pueblo", 7, 2, 0, "avenida"),
-    "res_bartlett": ("pueblo", 7, 1, 0, "hotel"),
-    "res_sandford": ("pueblo", 8, 0, 0, "calle"),
-    "res_puente_sandford": ("pueblo", 7, 0, 0, "puente"),
-    "res_muelle": ("pueblo", 6, 0, 0, "muelle"),
-    "res_faro": ("pueblo", 6, 1, 0, "faro"),
-    "res_entrada_parque": ("pueblo", 9, 3, 0, "atraccion"),
+    "res_bachman": ("pueblo", 9, 3, 0),
+    "res_entrada_parque": ("pueblo", 10, 3, 0),
+    "res_nathan": ("pueblo", 8, 2, 0),
+    "res_craig": ("pueblo", 9, 2, 0),
+    "res_faro": ("pueblo", 7, 1, 0),
+    "res_bartlett": ("pueblo", 8, 1, 0),
+    "res_weaver": ("pueblo", 9, 1, 0),
+    "res_muelle": ("pueblo", 7, 0, 0),
+    "res_puente_sandford": ("pueblo", 8, 0, 0),
+    "res_sandford": ("pueblo", 9, 0, 0),
     # --- Escuela Midwich ---------------------------------------------------
-    "esc_entrada": ("escuela", 1, 0, 0, "calle"),
-    "esc_recepcion": ("escuela", 1, 1, 0, "interior"),
-    "esc_patio": ("escuela", 1, 2, 0, "descampado"),
-    "esc_pasillo_pb_izq": ("escuela", 0, 2, 0, "pasillo"),
-    "esc_pasillo_pb_der": ("escuela", 2, 2, 0, "pasillo"),
-    "esc_caldera": ("escuela", 0, 2, -1, "sotano"),
-    "esc_pasillo_1p_izq": ("escuela", 0, 2, 1, "pasillo"),
-    "esc_lab_quimica": ("escuela", 1, 2, 1, "sala"),
-    "esc_sala_musica": ("escuela", 0, 1, 1, "sala"),
-    "esc_biblioteca": ("escuela", 0, 3, 1, "sala"),
-    "esc_azotea": ("escuela", 0, 2, 2, "azotea"),
+    "esc_entrada": ("escuela", 1, 0, 0),
+    "esc_recepcion": ("escuela", 1, 1, 0),
+    "esc_patio": ("escuela", 1, 2, 0),
+    "esc_pasillo_pb_izq": ("escuela", 0, 2, 0),
+    "esc_pasillo_pb_der": ("escuela", 2, 2, 0),
+    "esc_caldera": ("escuela", 0, 2, -1),
+    "esc_pasillo_1p_izq": ("escuela", 0, 2, 1),
+    "esc_lab_quimica": ("escuela", 1, 2, 1),
+    "esc_sala_musica": ("escuela", 0, 1, 1),
+    "esc_biblioteca": ("escuela", 0, 3, 1),
+    "esc_azotea": ("escuela", 0, 2, 2),
     # --- Hospital Alchemilla -----------------------------------------------
-    "hos_patio": ("hospital", 1, 0, 0, "calle"),
-    "hos_recepcion": ("hospital", 1, 1, 0, "interior"),
-    "hos_oficina": ("hospital", 0, 1, 0, "sala"),
-    "hos_examen": ("hospital", 2, 1, 0, "sala"),
-    "hos_farmacia": ("hospital", 2, 2, 0, "sala"),
-    "hos_consultorio": ("hospital", 3, 2, 0, "sala"),
-    "hos_reuniones": ("hospital", 3, 3, 0, "sala"),
-    "hos_cocina": ("hospital", 1, 2, 0, "sala"),
-    "hos_direccion": ("hospital", 0, 2, 0, "sala"),
-    "hos_ascensor": ("hospital", 2, 0, 0, "escalera"),
-    "hos_pasillo_2": ("hospital", 2, 0, 1, "pasillo"),
-    "hos_pasillo_3": ("hospital", 2, 0, 2, "pasillo"),
-    "hos_escalera_sotano": ("hospital", 1, 1, -1, "escalera"),
-    "hos_generador": ("hospital", 1, 1, -2, "sotano"),
+    "hos_patio": ("hospital", 1, 0, 0),
+    "hos_ascensor": ("hospital", 2, 0, 0),
+    "hos_oficina": ("hospital", 0, 1, 0),
+    "hos_recepcion": ("hospital", 1, 1, 0),
+    "hos_examen": ("hospital", 2, 1, 0),
+    "hos_direccion": ("hospital", 0, 2, 0),
+    "hos_cocina": ("hospital", 1, 2, 0),
+    "hos_farmacia": ("hospital", 2, 2, 0),
+    "hos_consultorio": ("hospital", 3, 2, 0),
+    "hos_reuniones": ("hospital", 3, 3, 0),
+    "hos_pasillo_2": ("hospital", 2, 0, 1),
+    "hos_pasillo_3": ("hospital", 2, 0, 2),
+    "hos_escalera_sotano": ("hospital", 1, 1, -1),
+    "hos_generador": ("hospital", 1, 1, -2),
     # --- Alcantarillas -----------------------------------------------------
-    "alc_entrada": ("cloacas", 1, 4, -1, "escalera"),
-    "alc_tunel_norte": ("cloacas", 1, 3, -1, "alcantarilla"),
-    "alc_cruce": ("cloacas", 1, 2, -1, "alcantarilla"),
-    "alc_oficina": ("cloacas", 0, 2, -1, "sala"),
-    "alc_nivel_superior": ("cloacas", 1, 2, 0, "alcantarilla"),
-    "alc_tunel_sur": ("cloacas", 1, 1, -1, "alcantarilla"),
-    "alc_salida": ("cloacas", 1, 0, -1, "escalera"),
+    "alc_entrada": ("cloacas", 1, 4, -1),
+    "alc_tunel_norte": ("cloacas", 1, 3, -1),
+    "alc_cruce": ("cloacas", 1, 2, -1),
+    "alc_oficina": ("cloacas", 0, 2, -1),
+    "alc_tunel_sur": ("cloacas", 1, 1, -1),
+    "alc_salida": ("cloacas", 1, 0, -1),
+    "alc_nivel_superior": ("cloacas", 1, 2, 0),
     # --- Lakeside Amusement Park -------------------------------------------
-    "par_explanada": ("parque", 1, 1, 0, "descampado"),
-    "par_calesita": ("parque", 1, 2, 0, "atraccion"),
-    "par_vuelta_al_mundo": ("parque", 2, 1, 0, "atraccion"),
-    "par_montana_rusa": ("parque", 0, 1, 0, "atraccion"),
+    "par_calesita": ("parque", 1, 2, 0),
+    "par_montana_rusa": ("parque", 0, 1, 0),
+    "par_explanada": ("parque", 1, 1, 0),
+    "par_vuelta_al_mundo": ("parque", 2, 1, 0),
 }
 
 # --------------------------------------------------------------------------
-# Interiores de una sola sala. No ocupan celda: el minimapa muestra de dónde
-# se entró. El tipo se usa igual, para el icono del jugador y la leyenda.
+# Interiores de una sola sala, sin celda propia
 # --------------------------------------------------------------------------
 
 ANCLADAS = {
@@ -166,11 +325,210 @@ ANCLADAS = {
     "par_heladeria": "comercio",
 }
 
-# Nombre legible de cada plano, para el encabezado del mapa.
-NOMBRES_PLANO = {
-    "pueblo": "Silent Hill",
-    "escuela": "Escuela Midwich",
-    "hospital": "Hospital Alchemilla",
-    "cloacas": "Alcantarillas",
-    "parque": "Lakeside Amusement Park",
+# --------------------------------------------------------------------------
+# Las celdas que no reclamó nadie: salas genéricas según su tipo.
+#
+# Rellenan la grilla para que se pueda caminar por todos lados sin escribir
+# doscientas descripciones a mano. Son deliberadamente sobrias: el detalle está
+# en las salas con nombre.
+# --------------------------------------------------------------------------
+
+RELLENO = {
+    "calle": (
+        "Calzada",
+        "Un tramo de calle entre dos esquinas. Asfalto partido, un cordón que "
+        "en algún momento fue blanco, y la niebla cerrando el fondo a los diez "
+        "metros.",
+    ),
+    "cruce": (
+        "Cruce",
+        "Cuatro esquinas iguales, sin cartel que diga cuál es cuál. El "
+        "semáforo cuelga apagado.",
+    ),
+    "avenida": (
+        "Avenida",
+        "Dos manos separadas por un cantero central con árboles pelados. Es "
+        "ancha, y esa anchura no tranquiliza: se ve poco y de lejos.",
+    ),
+    "vereda": (
+        "Vereda",
+        "Un tramo de vereda ancha, de las que se hicieron pensando en gente "
+        "paseando. Baldosas flojas y ceniza acumulada contra el cordón.",
+    ),
+    "callejon": (
+        "Callejón",
+        "Dos metros de ancho entre medianeras, con contenedores y cables de "
+        "ropa cruzando arriba. Acá la niebla se queda quieta.",
+    ),
+    "descampado": (
+        "Baldío",
+        "Terreno vacío entre construcciones: pasto quemado, escombros y un "
+        "cerco de alambre caído. Alguien apiló ladrillos, hace tiempo.",
+    ),
+    "casa": (
+        "Casa abandonada",
+        "Una vivienda de tablas con el porche hundido y las cortinas corridas. "
+        "La puerta del frente está abierta lo justo para que entre el aire.",
+    ),
+    "edificio": (
+        "Edificio de departamentos",
+        "Cuatro pisos de ladrillo con balcones franceses y macetas muertas. El "
+        "portero eléctrico tiene doce timbres y ninguno anda.",
+    ),
+    "comercio": (
+        "Local a la calle",
+        "Un negocio chico con la persiana a medio bajar y la vidriera "
+        "empañada por dentro. El cartel perdió la mitad de las letras.",
+    ),
+    "industria": (
+        "Galpón",
+        "Chapa acanalada, portón corredizo y un muelle de carga a la altura de "
+        "un camión. Huele a aceite quemado.",
+    ),
+    "escuela": (
+        "Paredón de la escuela",
+        "El muro perimetral de la Escuela Midwich: ladrillo, tres metros, "
+        "rematado con una reja de puntas.",
+    ),
+    "pasillo": (
+        "Pasillo",
+        "Un tramo de pasillo con piso encerado y la mitad de los tubos "
+        "fluorescentes apagados.",
+    ),
+    "interior": (
+        "Sala",
+        "Un ambiente cerrado, sin ventanas a la calle.",
+    ),
+    "azotea": (
+        "Azotea",
+        "Membrana asfáltica, maquinaria de ventilación y un parapeto bajo. "
+        "Desde acá se ve niebla en todas las direcciones.",
+    ),
+    "sotano": (
+        "Subsuelo",
+        "Hormigón sin revestir, caños forrados y una lámpara enjaulada cada "
+        "varios metros.",
+    ),
+    "atraccion": (
+        "Atracción del parque",
+        "Una estructura de hierro pintado, con la cola de acceso marcada por "
+        "vallas cromadas. Sigue funcionando, sola.",
+    ),
+    "alcantarilla": (
+        "Galería",
+        "Un caño de sección ovalada por el que se camina erguido, con una "
+        "banquina de cemento a cada lado del canal.",
+    ),
+    "puente": (
+        "Puente",
+        "Tablero de acero remachado sobre agua negra y quieta.",
+    ),
+    "muelle": (
+        "Muelle",
+        "Tablones hinchados de humedad sobre el agua, con bitas de hierro y "
+        "neumáticos colgando como defensas.",
+    ),
+    "iglesia": (
+        "Atrio",
+        "El terreno de la iglesia: piedra gris, un cerco bajo de hierro y "
+        "canteros con la tierra revuelta.",
+    ),
+    "hospital": (
+        "Predio del hospital",
+        "Terreno del Hospital Alchemilla: reja de lanzas, cantero de boj sin "
+        "podar y la rampa de ambulancias vacía.",
+    ),
+    "comisaria": (
+        "Frente de la comisaría",
+        "Ladrillo visto, dos escalones de granito y un farol azul sobre la "
+        "puerta. El farol está prendido.",
+    ),
+    "hotel": (
+        "Explanada del hotel",
+        "Una playa de estacionamiento en pendiente, con una marquesina de "
+        "luces de globo. La mitad están fundidas.",
+    ),
+    "faro": (
+        "Punta del faro",
+        "Una punta de piedra que entra en el lago. La torre blanca y roja gira "
+        "su linterna cada doce segundos y no ilumina nada.",
+    ),
+    "escalera": (
+        "Escalera",
+        "Hormigón sin revestir, pasamanos de caño pintado y una lámpara "
+        "enjaulada en cada descanso.",
+    ),
+    "estacionamiento": (
+        "Playón",
+        "Cemento marcado con líneas amarillas descoloridas y unos pocos autos "
+        "estacionados prolijamente, cubiertos de ceniza.",
+    ),
 }
+
+# Tipos de relleno que son de exterior: les corresponde el párrafo de niebla.
+RELLENO_EXTERIOR = frozenset(
+    (
+        "calle",
+        "cruce",
+        "avenida",
+        "vereda",
+        "callejon",
+        "descampado",
+        "puente",
+        "muelle",
+        "azotea",
+        "atraccion",
+        "iglesia",
+        "hospital",
+        "comisaria",
+        "hotel",
+        "faro",
+        "estacionamiento",
+    )
+)
+
+
+# --------------------------------------------------------------------------
+# Lectura de los dibujos
+# --------------------------------------------------------------------------
+
+
+def celdas_de(plano, z):
+    """
+    Convierte el dibujo de un nivel en un diccionario `{(x, y): tipo}`.
+
+    Args:
+        plano (str): clave del plano.
+        z (int): nivel.
+
+    Returns:
+        dict: tipo de cada celda, incluidas las intransitables.
+
+    """
+    dibujo = PLANOS[plano]["niveles"][z]
+    filas = [f for f in dibujo.strip("\n").splitlines()]
+    alto = len(filas)
+    celdas = {}
+    for indice, fila in enumerate(filas):
+        y = alto - 1 - indice  # la primera línea es la de más al norte
+        for x, caracter in enumerate(fila):
+            if caracter == " ":
+                continue
+            tipo = LEYENDA.get(caracter)
+            if tipo is None:
+                raise ValueError(
+                    f"plano '{plano}' nivel {z}: el carácter {caracter!r} en "
+                    f"({x}, {y}) no está en LEYENDA"
+                )
+            celdas[(x, y)] = tipo
+    return celdas
+
+
+def todas_las_celdas():
+    """Devuelve `{(plano, x, y, z): tipo}` para todos los planos y niveles."""
+    todo = {}
+    for plano, spec in PLANOS.items():
+        for z in spec["niveles"]:
+            for (x, y), tipo in celdas_de(plano, z).items():
+                todo[(plano, x, y, z)] = tipo
+    return todo

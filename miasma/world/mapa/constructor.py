@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Construye (y reconstruye) el mapa de pruebas desde `world.mapa.silent_hill`.
+Construye (y reconstruye) el mundo desde `silent_hill.py` y `ubicaciones.py`.
 
 Uso desde el juego, como superusuario::
 
@@ -11,9 +11,20 @@ Uso desde la línea de comandos::
     docker compose exec game evennia shell -c "from world.mapa.constructor import construir; construir()"
 
 Es idempotente: cada corrida borra lo que dejó la corrida anterior y levanta
-todo de cero desde los datos. Solo toca objetos con la etiqueta del mapa, así
-que lo que hayas creado a mano dentro de una sala se pierde junto con la sala,
-pero nada de afuera del mapa se ve afectado.
+todo de cero. Solo toca objetos con la etiqueta del mapa, así que lo que hayas
+creado a mano dentro de una sala se pierde junto con la sala, pero nada de
+afuera del mapa se ve afectado.
+
+Cómo se arma el mundo:
+
+1. `ubicaciones.py` dibuja cada plano como una imagen de texto, un carácter por
+   celda. Toda celda transitable es una sala.
+2. Las celdas que reclama `NOMBRADAS` usan el nombre y la descripción escritos
+   en `silent_hill.py`. Las demás se llenan con salas genéricas según su tipo,
+   para que la grilla quede densa sin escribir doscientas descripciones.
+3. Cada sala se conecta automáticamente con sus vecinas ortogonales. Las
+   salidas declaradas a mano en `CONEXIONES` tienen prioridad: la conexión
+   automática nunca pisa una salida que ya existe con ese nombre.
 """
 
 import os
@@ -26,41 +37,89 @@ from evennia.objects.models import ObjectDB
 from evennia.objects.objects import DefaultExit, DefaultRoom
 from evennia.utils import create, search
 
+from world.mapa import iconos
 from world.mapa import silent_hill as datos
 from world.mapa import ubicaciones
 
-# Etiqueta que marca todo lo que pertenece al mapa generado. Es la que se usa
-# para borrar antes de reconstruir.
 TAG_MAPA = "silent_hill"
 TAG_CATEGORIA = "mapa"
 
-# Salas de ejemplo que Evennia crea de fábrica y que no queremos en el juego.
 SALAS_EJEMPLO = ("Limbo",)
 
-# Archivo que el constructor genera con los dbref resultantes. settings.py lo
-# importa para saber dónde arranca el juego. Está en .gitignore porque los
-# dbref son propios de cada base de datos.
 ARCHIVO_GENERADO = os.path.join(
     settings.GAME_DIR, "server", "conf", "mapa_generado.py"
 )
 
+# Vecinos ortogonales: dirección -> desplazamiento en (x, y).
+VECINOS = {
+    "norte": (0, 1),
+    "sur": (0, -1),
+    "este": (1, 0),
+    "oeste": (-1, 0),
+}
+
 
 # --------------------------------------------------------------------------
-# Validación de los datos
+# Validación
 # --------------------------------------------------------------------------
 
 
 def validar():
     """
-    Revisa `silent_hill.py` antes de tocar la base de datos.
+    Revisa los datos antes de tocar la base.
 
     Returns:
-        list: mensajes de error. Vacía si los datos son consistentes.
+        list: mensajes de error. Vacía si todo cierra.
 
     """
     errores = []
-    salidas = defaultdict(dict)
 
+    try:
+        celdas = ubicaciones.todas_las_celdas()
+    except ValueError as err:
+        return [str(err)]
+
+    transitables = {
+        pos: tipo
+        for pos, tipo in celdas.items()
+        if tipo not in iconos.INTRANSITABLES
+    }
+
+    # --- toda celda transitable tiene con qué rellenarse ---
+    for tipo in sorted({t for t in transitables.values() if t not in ubicaciones.RELLENO}):
+        errores.append(f"el tipo '{tipo}' no tiene entrada en RELLENO")
+
+    # --- las salas con nombre caen en una celda transitable, y una sola ---
+    ocupadas = {}
+    for clave, pos in ubicaciones.NOMBRADAS.items():
+        if clave not in datos.SALAS:
+            errores.append(f"NOMBRADAS tiene '{clave}', que no existe en SALAS")
+            continue
+        if pos not in celdas:
+            errores.append(f"'{clave}' apunta a la celda {pos}, que no está dibujada")
+        elif pos not in transitables:
+            errores.append(
+                f"'{clave}' cae en {pos}, que es '{celdas[pos]}' y no se camina"
+            )
+        elif pos in ocupadas:
+            errores.append(f"'{clave}' y '{ocupadas[pos]}' se pelean la celda {pos}")
+        else:
+            ocupadas[pos] = clave
+
+    # --- toda sala escrita está ubicada, de una forma o de la otra ---
+    for clave in datos.SALAS:
+        en_grilla = clave in ubicaciones.NOMBRADAS
+        anclada = clave in ubicaciones.ANCLADAS
+        if not en_grilla and not anclada:
+            errores.append(f"la sala '{clave}' no está ni en NOMBRADAS ni en ANCLADAS")
+        elif en_grilla and anclada:
+            errores.append(f"la sala '{clave}' está en NOMBRADAS y en ANCLADAS")
+    for clave in ubicaciones.ANCLADAS:
+        if clave not in datos.SALAS:
+            errores.append(f"ANCLADAS tiene '{clave}', que no existe en SALAS")
+
+    # --- las conexiones a mano son coherentes ---
+    salidas = defaultdict(dict)
     for i, conexion in enumerate(datos.CONEXIONES):
         if len(conexion) != 4:
             errores.append(
@@ -85,51 +144,38 @@ def validar():
     if datos.SALA_INICIO not in datos.SALAS:
         errores.append(f"SALA_INICIO '{datos.SALA_INICIO}' no existe en SALAS")
 
-    # Toda sala tiene que saber cómo se dibuja: o tiene celda propia, o se
-    # ancla a otra. Sin eso queda un agujero en el minimapa.
-    celdas = {}
-    for clave in datos.SALAS:
-        en_grilla = clave in ubicaciones.UBICACIONES
-        anclada = clave in ubicaciones.ANCLADAS
-        if not en_grilla and not anclada:
-            errores.append(
-                f"la sala '{clave}' no está ni en UBICACIONES ni en ANCLADAS"
-            )
-        elif en_grilla and anclada:
-            errores.append(f"la sala '{clave}' está en UBICACIONES y en ANCLADAS")
-        elif en_grilla:
-            plano, x, y, z, _tipo = ubicaciones.UBICACIONES[clave]
-            if (plano, x, y, z) in celdas:
-                errores.append(
-                    f"'{clave}' y '{celdas[(plano, x, y, z)]}' ocupan la misma "
-                    f"celda ({plano} {x},{y},{z})"
-                )
-            celdas[(plano, x, y, z)] = clave
+    if errores:
+        return errores
 
-    for clave in ubicaciones.UBICACIONES:
-        if clave not in datos.SALAS:
-            errores.append(f"UBICACIONES tiene '{clave}', que no existe en SALAS")
-    for clave in ubicaciones.ANCLADAS:
-        if clave not in datos.SALAS:
-            errores.append(f"ANCLADAS tiene '{clave}', que no existe en SALAS")
+    # --- todo el mundo es alcanzable a pie desde el punto de partida ---
+    #     Se arma el grafo completo: las conexiones a mano más las automáticas
+    #     entre celdas vecinas.
+    por_celda = dict(ocupadas)
+    for pos in transitables:
+        por_celda.setdefault(pos, f"relleno{pos}")
 
-    # Salas a las que no llega ninguna conexión: casi siempre es un typo.
-    for clave in datos.SALAS:
-        if clave not in salidas:
-            errores.append(f"la sala '{clave}' no tiene ninguna conexión")
+    grafo = defaultdict(set)
+    for origen, destinos in salidas.items():
+        grafo[origen].update(destinos.values())
+    for (plano, x, y, z), clave in por_celda.items():
+        for dx, dy in VECINOS.values():
+            vecina = por_celda.get((plano, x + dx, y + dy, z))
+            if vecina:
+                grafo[clave].add(vecina)
+                grafo[vecina].add(clave)
 
-    # Todo tiene que ser alcanzable caminando desde la sala de inicio.
-    if datos.SALA_INICIO in datos.SALAS:
-        vistas = {datos.SALA_INICIO}
-        cola = deque([datos.SALA_INICIO])
-        while cola:
-            actual = cola.popleft()
-            for destino in salidas[actual].values():
-                if destino not in vistas:
-                    vistas.add(destino)
-                    cola.append(destino)
-        for clave in sorted(set(datos.SALAS) - vistas):
-            errores.append(f"la sala '{clave}' no es alcanzable desde SALA_INICIO")
+    vistas = {datos.SALA_INICIO}
+    cola = deque([datos.SALA_INICIO])
+    while cola:
+        actual = cola.popleft()
+        for destino in grafo[actual]:
+            if destino not in vistas:
+                vistas.add(destino)
+                cola.append(destino)
+
+    for clave in sorted(set(por_celda.values()) | set(datos.SALAS)):
+        if clave not in vistas:
+            errores.append(f"'{clave}' no es alcanzable caminando desde SALA_INICIO")
 
     return errores
 
@@ -140,12 +186,7 @@ def validar():
 
 
 def _alias_de(nombre):
-    """
-    Parte "café|cafe|5to2" en ("café", ["cafe", "5to2"]).
-
-    Si la clave es una dirección conocida, le suma los alias de DIRECCIONES.
-
-    """
+    """Parte "café|cafe|5to2" en ("café", ["cafe", "5to2"]) y suma direcciones."""
     partes = nombre.split("|")
     clave, alias = partes[0], partes[1:]
     alias += list(datos.DIRECCIONES.get(clave, ()))
@@ -174,14 +215,32 @@ def _escribir_generado(sala_inicio):
         fh.write("\n".join(lineas))
 
 
+def _crear_sala(key, desc, tipo, plano=None, pos=None):
+    """Crea una sala del mapa con sus atributos de grilla."""
+    atributos = [("desc", desc), ("tipo_mapa", tipo)]
+    etiquetas = [(TAG_MAPA, TAG_CATEGORIA), (tipo, "tipo_mapa")]
+    if plano is not None:
+        atributos += [("plano", plano), ("pos", pos)]
+        etiquetas.append((plano, "plano"))
+    return create.create_object(
+        settings.BASE_ROOM_TYPECLASS,
+        key=key,
+        attributes=atributos,
+        tags=etiquetas,
+        # Una sala no vive dentro de nada, y pedir home obligaría a resolver
+        # settings.DEFAULT_HOME, que en este punto todavía puede apuntar a una
+        # sala que esta misma corrida va a borrar.
+        nohome=True,
+    )
+
+
 def construir(caller=None, borrar_ejemplos=True):
     """
-    Borra el mapa anterior y lo reconstruye desde los datos.
+    Borra el mundo anterior y lo reconstruye desde los datos.
 
     Args:
         caller (Object, optional): si viene, se le informan los pasos in-game.
-        borrar_ejemplos (bool): además elimina las salas de ejemplo de Evennia
-            (Limbo), una vez que hay a dónde mudar lo que estuviera adentro.
+        borrar_ejemplos (bool): además elimina las salas de ejemplo de Evennia.
 
     Returns:
         dict: resumen de lo construido.
@@ -196,76 +255,94 @@ def construir(caller=None, borrar_ejemplos=True):
 
     errores = validar()
     if errores:
-        informar("|rEl mapa tiene errores. No se construyó nada.|n")
+        informar("|rEl mundo tiene errores. No se construyó nada.|n")
         for err in errores:
             informar(f"  - {err}")
         return {"errores": errores}
 
-    # --- 1. Lo que quedó de una corrida anterior, antes de crear nada nuevo.
     viejos = list(search.search_tag(TAG_MAPA, category=TAG_CATEGORIA))
-    informar(f"Objetos del mapa anterior a reemplazar: |w{len(viejos)}|n")
+    informar(f"Objetos del mundo anterior a reemplazar: |w{len(viejos)}|n")
 
-    # --- 2. Salas.
-    salas = {}
-    for clave, spec in datos.SALAS.items():
+    celdas = ubicaciones.todas_las_celdas()
+    nombrada_en = {pos: clave for clave, pos in ubicaciones.NOMBRADAS.items()}
+
+    salas = {}       # clave de datos -> sala
+    por_celda = {}   # (plano, x, y, z) -> sala
+    escritas = relleno = 0
+
+    # --- 1. Una sala por celda transitable --------------------------------
+    for pos, tipo in sorted(celdas.items()):
+        if tipo in iconos.INTRANSITABLES:
+            continue
+        plano, x, y, z = pos
+        clave = nombrada_en.get(pos)
+        if clave:
+            spec = datos.SALAS[clave]
+            desc = spec["desc"]
+            if spec.get("exterior"):
+                desc = datos.NIEBLA + desc
+            sala = _crear_sala(spec["nombre"], desc, tipo, plano, (x, y, z))
+            salas[clave] = sala
+            escritas += 1
+        else:
+            nombre, desc = ubicaciones.RELLENO[tipo]
+            if tipo in ubicaciones.RELLENO_EXTERIOR:
+                desc = datos.NIEBLA + desc
+            sala = _crear_sala(nombre, desc, tipo, plano, (x, y, z))
+            relleno += 1
+        por_celda[pos] = sala
+
+    informar(f"Salas con nombre propio: |w{escritas}|n")
+    informar(f"Salas de relleno: |w{relleno}|n")
+
+    # --- 2. Interiores sin celda propia -----------------------------------
+    for clave, tipo in ubicaciones.ANCLADAS.items():
+        spec = datos.SALAS[clave]
         desc = spec["desc"]
         if spec.get("exterior"):
             desc = datos.NIEBLA + desc
-        # Dónde cae en el mapa. Las que tienen celda propia guardan plano y
-        # posición; las ancladas solo el tipo, y el ancla se resuelve más
-        # abajo, cuando ya existen las salidas.
-        if clave in ubicaciones.UBICACIONES:
-            plano, x, y, z, tipo = ubicaciones.UBICACIONES[clave]
-            atributos_mapa = [
-                ("tipo_mapa", tipo),
-                ("plano", plano),
-                ("pos", (x, y, z)),
-            ]
-        else:
-            atributos_mapa = [("tipo_mapa", ubicaciones.ANCLADAS[clave])]
+        salas[clave] = _crear_sala(spec["nombre"], desc, tipo)
+    informar(f"Interiores sin celda: |w{len(ubicaciones.ANCLADAS)}|n")
 
-        salas[clave] = create.create_object(
-            settings.BASE_ROOM_TYPECLASS,
-            key=spec["nombre"],
-            attributes=[("desc", desc)] + atributos_mapa,
-            # Sin home: una sala no vive dentro de nada, y pedirlo obligaría a
-            # resolver settings.DEFAULT_HOME, que en este punto todavía puede
-            # estar apuntando a una sala que esta misma corrida va a borrar.
+    # --- 3. Salidas declaradas a mano -------------------------------------
+    def crear_salida(origen, nombre, destino):
+        clave, alias = _alias_de(nombre)
+        if any(salida.key == clave for salida in origen.exits):
+            return False
+        create.create_object(
+            settings.BASE_EXIT_TYPECLASS,
+            key=clave,
+            aliases=alias,
+            location=origen,
+            destination=destino,
             nohome=True,
-            tags=[
-                (TAG_MAPA, TAG_CATEGORIA),
-                (spec["distrito"], "distrito"),
-                (clave, "clave_mapa"),
-            ],
+            tags=[(TAG_MAPA, TAG_CATEGORIA)],
         )
-    informar(f"Salas creadas: |w{len(salas)}|n")
+        return True
 
-    # --- 3. Salidas.
-    total_salidas = 0
+    manuales = 0
     for a, ida, b, vuelta in datos.CONEXIONES:
         for origen, nombre, destino in (
             (salas[a], ida, salas[b]),
             (salas[b], vuelta, salas[a]),
         ):
-            if nombre is None:
-                continue
-            clave, alias = _alias_de(nombre)
-            create.create_object(
-                settings.BASE_EXIT_TYPECLASS,
-                key=clave,
-                aliases=alias,
-                location=origen,
-                destination=destino,
-                nohome=True,
-                tags=[(TAG_MAPA, TAG_CATEGORIA)],
-            )
-            total_salidas += 1
-    informar(f"Salidas creadas: |w{total_salidas}|n")
+            if nombre is not None and crear_salida(origen, nombre, destino):
+                manuales += 1
+    informar(f"Salidas escritas a mano: |w{manuales}|n")
 
-    # --- 3b. Anclas de los interiores sin celda propia.
-    #        Se busca de qué sala se entra: la primera con celda propia que
-    #        tenga una salida hacia acá. Se hace ahora y no antes porque hace
-    #        falta que las salidas existan.
+    # --- 4. Conexión automática de la grilla ------------------------------
+    #        Toda celda se comunica con sus vecinas ortogonales. Si ya había
+    #        una salida con ese nombre —porque la declaró CONEXIONES— se
+    #        respeta la escrita a mano.
+    automaticas = 0
+    for (plano, x, y, z), sala in por_celda.items():
+        for direccion, (dx, dy) in VECINOS.items():
+            vecina = por_celda.get((plano, x + dx, y + dy, z))
+            if vecina and crear_salida(sala, direccion, vecina):
+                automaticas += 1
+    informar(f"Salidas automáticas de la grilla: |w{automaticas}|n")
+
+    # --- 5. Anclas de los interiores --------------------------------------
     ancladas = 0
     for clave in ubicaciones.ANCLADAS:
         interior = salas[clave]
@@ -282,23 +359,20 @@ def construir(caller=None, borrar_ejemplos=True):
 
     inicio = salas[datos.SALA_INICIO]
 
-    # --- 4. Salas de ejemplo que trae Evennia.
+    # --- 6. Salas de ejemplo de Evennia -----------------------------------
     ejemplos = []
     if borrar_ejemplos:
         for nombre in SALAS_EJEMPLO:
             for obj in search.search_object(nombre, exact=True):
-                if obj not in salas.values() and obj.destination is None:
+                if obj not in por_celda.values() and obj.destination is None:
                     ejemplos.append(obj)
 
     condenadas = set(viejos) | set(ejemplos)
 
-    # --- 5. Rescatar lo que esté parado sobre algo que va a desaparecer.
-    #        Alcanza con mirar todo lo que no sea sala ni salida: personajes
-    #        (estén o no poseídos por una cuenta) y objetos sueltos.
-    #        Ojo: location=None no es un huérfano. Es el estado normal de un
+    # --- 7. Rescatar lo que esté parado sobre algo que va a desaparecer ---
+    #        location=None no es un huérfano: es el estado normal de un
     #        personaje deslogueado, que Evennia saca del mundo hasta que su
-    #        cuenta vuelva. A esos hay que corregirles el home y el lugar de
-    #        reingreso, no meterlos al mapa a la fuerza.
+    #        cuenta vuelva.
     mudados = 0
     for obj in ObjectDB.objects.all():
         if obj in condenadas or isinstance(obj, (DefaultRoom, DefaultExit)):
@@ -313,9 +387,9 @@ def construir(caller=None, borrar_ejemplos=True):
     if mudados:
         informar(f"Objetos y personajes mudados a la sala de inicio: |w{mudados}|n")
 
-    # --- 6. Recién ahora, borrar. Al borrar una sala se van con ella sus
-    #        salidas, así que la mitad de esta lista ya no existe para cuando
-    #        le llega el turno: eso no es un error.
+    # --- 8. Recién ahora, borrar ------------------------------------------
+    #        Al borrar una sala se van con ella sus salidas, así que la mitad
+    #        de esta lista ya no existe para cuando le llega el turno.
     borradas = 0
     for obj in condenadas:
         try:
@@ -324,14 +398,7 @@ def construir(caller=None, borrar_ejemplos=True):
         except ObjectDoesNotExist:
             pass
     informar(f"Objetos borrados: |w{borradas}|n")
-    if ejemplos:
-        informar(
-            "Salas de ejemplo eliminadas: |w"
-            + ", ".join(o.key for o in ejemplos)
-            + "|n"
-        )
 
-    # --- 7. Dejar el punto de partida donde settings.py lo pueda leer.
     _escribir_generado(inicio)
     informar(
         f"\nEl juego arranca en |c{inicio.key}|n (|w#{inicio.id}|n).\n"
@@ -341,8 +408,9 @@ def construir(caller=None, borrar_ejemplos=True):
     )
 
     return {
-        "salas": len(salas),
-        "salidas": total_salidas,
+        "salas": len(por_celda) + len(ubicaciones.ANCLADAS),
+        "relleno": relleno,
+        "salidas": manuales + automaticas,
         "borradas": borradas,
         "inicio": inicio,
     }

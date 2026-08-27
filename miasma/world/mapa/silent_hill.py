@@ -144,7 +144,8 @@ SALAS.update({
             "después no sigue: el pavimento se levantó en placas, como si algo "
             "hubiera empujado desde abajo, y entre las placas hay una oscuridad "
             "sin fondo visible.\n\n"
-            "No se pasa. Bradbury Street baja hacia el sur, intacta."
+            "Se puede bordear por el baldío del oeste, pisando con cuidado. "
+            "Bradbury Street baja hacia el sur, intacta."
         ),
     },
     "osh_matheson_bachman": {
@@ -270,7 +271,8 @@ SALAS.update({
             "El oeste de Bloch Street. En la vidriera de |wCut-Rite Chain Saws|n hay "
             "una motosierra sobre un pedestal de terciopelo rojo, iluminada por un "
             "spot que sigue funcionando.\n\n"
-            "Más allá, la calle desaparece bajo un derrumbe de mampostería."
+            "Más allá la calle desaparece bajo un derrumbe de mampostería, y "
+            "hay que trepar por encima para seguir hacia el oeste."
         ),
     },
     "osh_callejon_basket": {

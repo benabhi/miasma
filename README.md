@@ -121,8 +121,10 @@ docker compose up -d
 ## El mapa de pruebas
 
 El mundo actual es una reconstrucción de la ciudad de *Silent Hill* (1999):
-104 salas, 238 salidas, con la escuela Midwich y el hospital Alchemilla
-recorribles por dentro. El juego arranca en el Café 5to2.
+116 salas y 311 salidas sobre una grilla densa —se camina de punta a punta en
+cualquier dirección—, con la escuela Midwich y el hospital Alchemilla
+recorribles por dentro y un minimapa permanente en cada `mirar`. El juego
+arranca en el Café 5to2.
 
 Se genera entero desde datos y se reconstruye con un comando:
 
