@@ -23,6 +23,9 @@ salidas, los mensajes de movimiento) se traducen por el catálogo gettext en
 from evennia.commands.default import general, help
 from evennia.utils import utils
 
+from commands.command import Command
+from world.mapa import iconos, render, ubicaciones
+
 
 class CmdMirar(general.CmdLook):
     """
@@ -473,3 +476,62 @@ class CmdAyuda(help.CmdHelp):
 
     def format_help_index(self, *args, **kwargs):
         return self._traducir(super().format_help_index(*args, **kwargs))
+
+
+class CmdMapa(Command):
+    """
+    ver el mapa de la zona
+
+    Uso:
+      mapa
+      mapa <radio>
+
+    Muestra el mapa completo del plano donde estás —el pueblo, la escuela, el
+    hospital, las alcantarillas o el parque— con tu posición marcada, más una
+    referencia de qué es cada símbolo.
+
+    El minimapa de |wmirar|n muestra solo lo que tenés al lado. Este muestra
+    todo lo que da la pantalla. Con un número, se ajusta cuánto abarca:
+
+      mapa 5     - cinco celdas a cada lado
+    """
+
+    key = "mapa"
+    aliases = ["map"]
+    locks = "cmd:all()"
+    help_category = "general"
+
+    def func(self):
+        sala = self.caller.location
+        if not sala:
+            self.msg("No estás en ningún lado.")
+            return
+
+        radio = 12
+        if self.args.strip():
+            if not self.args.strip().isdigit():
+                self.msg("Uso: mapa [radio]")
+                return
+            radio = max(1, min(int(self.args.strip()), 30))
+
+        lineas, tipos = render.dibujar(sala, radio=radio)
+        if not lineas:
+            self.msg("Acá no hay mapa. No todas las zonas están relevadas.")
+            return
+
+        centro = sala if render.posicion(sala) else render.ancla_de(sala)
+        plano, _x, _y, z = render.posicion(centro)
+        titulo = ubicaciones.NOMBRES_PLANO.get(plano, plano)
+
+        cabecera = f"|c{titulo}|n"
+        niveles = render.niveles_del_plano(plano)
+        if len(niveles) > 1:
+            cabecera += f" |x— nivel {z} de {min(niveles)}..{max(niveles)}|n"
+        if centro is not sala:
+            cabecera += f"\n|xEstás dentro de {sala.get_display_name(self.caller)}.|n"
+
+        salida = [cabecera, ""] + lineas
+        referencia = iconos.leyenda(tipos)
+        if referencia:
+            salida += ["", "|wReferencia:|n"] + referencia
+        self.msg("\n".join(salida))

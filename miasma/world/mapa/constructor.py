@@ -27,6 +27,7 @@ from evennia.objects.objects import DefaultExit, DefaultRoom
 from evennia.utils import create, search
 
 from world.mapa import silent_hill as datos
+from world.mapa import ubicaciones
 
 # Etiqueta que marca todo lo que pertenece al mapa generado. Es la que se usa
 # para borrar antes de reconstruir.
@@ -83,6 +84,34 @@ def validar():
 
     if datos.SALA_INICIO not in datos.SALAS:
         errores.append(f"SALA_INICIO '{datos.SALA_INICIO}' no existe en SALAS")
+
+    # Toda sala tiene que saber cómo se dibuja: o tiene celda propia, o se
+    # ancla a otra. Sin eso queda un agujero en el minimapa.
+    celdas = {}
+    for clave in datos.SALAS:
+        en_grilla = clave in ubicaciones.UBICACIONES
+        anclada = clave in ubicaciones.ANCLADAS
+        if not en_grilla and not anclada:
+            errores.append(
+                f"la sala '{clave}' no está ni en UBICACIONES ni en ANCLADAS"
+            )
+        elif en_grilla and anclada:
+            errores.append(f"la sala '{clave}' está en UBICACIONES y en ANCLADAS")
+        elif en_grilla:
+            plano, x, y, z, _tipo = ubicaciones.UBICACIONES[clave]
+            if (plano, x, y, z) in celdas:
+                errores.append(
+                    f"'{clave}' y '{celdas[(plano, x, y, z)]}' ocupan la misma "
+                    f"celda ({plano} {x},{y},{z})"
+                )
+            celdas[(plano, x, y, z)] = clave
+
+    for clave in ubicaciones.UBICACIONES:
+        if clave not in datos.SALAS:
+            errores.append(f"UBICACIONES tiene '{clave}', que no existe en SALAS")
+    for clave in ubicaciones.ANCLADAS:
+        if clave not in datos.SALAS:
+            errores.append(f"ANCLADAS tiene '{clave}', que no existe en SALAS")
 
     # Salas a las que no llega ninguna conexión: casi siempre es un typo.
     for clave in datos.SALAS:
@@ -182,10 +211,23 @@ def construir(caller=None, borrar_ejemplos=True):
         desc = spec["desc"]
         if spec.get("exterior"):
             desc = datos.NIEBLA + desc
+        # Dónde cae en el mapa. Las que tienen celda propia guardan plano y
+        # posición; las ancladas solo el tipo, y el ancla se resuelve más
+        # abajo, cuando ya existen las salidas.
+        if clave in ubicaciones.UBICACIONES:
+            plano, x, y, z, tipo = ubicaciones.UBICACIONES[clave]
+            atributos_mapa = [
+                ("tipo_mapa", tipo),
+                ("plano", plano),
+                ("pos", (x, y, z)),
+            ]
+        else:
+            atributos_mapa = [("tipo_mapa", ubicaciones.ANCLADAS[clave])]
+
         salas[clave] = create.create_object(
             settings.BASE_ROOM_TYPECLASS,
             key=spec["nombre"],
-            attributes=[("desc", desc)],
+            attributes=[("desc", desc)] + atributos_mapa,
             # Sin home: una sala no vive dentro de nada, y pedirlo obligaría a
             # resolver settings.DEFAULT_HOME, que en este punto todavía puede
             # estar apuntando a una sala que esta misma corrida va a borrar.
@@ -219,6 +261,24 @@ def construir(caller=None, borrar_ejemplos=True):
             )
             total_salidas += 1
     informar(f"Salidas creadas: |w{total_salidas}|n")
+
+    # --- 3b. Anclas de los interiores sin celda propia.
+    #        Se busca de qué sala se entra: la primera con celda propia que
+    #        tenga una salida hacia acá. Se hace ahora y no antes porque hace
+    #        falta que las salidas existan.
+    ancladas = 0
+    for clave in ubicaciones.ANCLADAS:
+        interior = salas[clave]
+        for a, ida, b, vuelta in datos.CONEXIONES:
+            if b == clave and ida is not None:
+                interior.db.ancla = salas[a]
+                ancladas += 1
+                break
+            if a == clave and vuelta is not None:
+                interior.db.ancla = salas[b]
+                ancladas += 1
+                break
+    informar(f"Interiores anclados a su calle: |w{ancladas}|n")
 
     inicio = salas[datos.SALA_INICIO]
 

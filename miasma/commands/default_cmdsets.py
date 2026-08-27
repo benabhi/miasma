@@ -75,6 +75,7 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
                 jugador.CmdCasa,
                 jugador.CmdApodo,
                 jugador.CmdAyuda,
+                jugador.CmdMapa,
             ),
         )
 

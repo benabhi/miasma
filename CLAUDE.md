@@ -58,6 +58,10 @@ settings. `docs/MAPA.md` tiene la traza completa y el formato de los datos.
 Nunca crear salas del mapa con `dig`/`tunnel` in-game: la próxima
 reconstrucción no las va a conocer y quedan colgadas.
 
+Toda sala nueva necesita entrada en `world/mapa/ubicaciones.py`: o una celda
+propia en `UBICACIONES`, o un tipo en `ANCLADAS` si es un interior de una
+sola sala. El validador del constructor no deja construir sin eso.
+
 ## Diseño
 
 `docs/DISENO.md` tiene los pilares, la hoja de ruta por fases y las decisiones

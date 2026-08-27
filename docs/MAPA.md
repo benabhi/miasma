@@ -43,11 +43,88 @@ importa. Como es un archivo de settings, un `evennia reload` no alcanza.
 
 ---
 
+## El minimapa
+
+Cada `mirar` sale en dos columnas: el minimapa a la izquierda, el nombre y la
+descripción a la derecha, y debajo —a todo el ancho— las salidas, los personajes
+y las cosas. Se redibuja solo en cada movimiento, porque lo arma
+`Room.return_appearance()` (`typeclasses/rooms.py`).
+
+```
+┌─────────┐   Ellroy St. y Midwich St.
+│  ˙ ░ ⌂ ▤│
+│         │   La niebla lo come todo a diez metros. Cae ceniza, mansa...
+│· ˙ ░ ⌂ ▤│
+│         │   El paredón perimetral de la Escuela Primaria Midwich corre
+│  ˙ ⦿ ▦ ▦│   a lo largo de toda la vereda sur: ladrillo, tres metros...
+│         │
+└─────────┘
+Salidas: oeste, este, norte, sur y escuela
+```
+
+`mapa` (alias `map`) muestra el plano entero con una referencia de símbolos.
+Acepta un radio: `mapa 5`.
+
+### De dónde salen los iconos
+
+`world/mapa/iconos.py` mapea **tipos** de sala a caracteres. Se trabaja con
+tipos y no con caracteres sueltos para poder cambiar la estética del mapa desde
+un solo lugar. Hay iconos para calles, avenidas, puentes, callejones,
+descampados, comercios, casas, edificios, iglesia, escuela, hospital,
+comisaría, hotel, industria, interiores, pasillos, escaleras, sótanos, azoteas,
+agua, muelle, faro, alcantarillas y atracciones.
+
+**Todos los caracteres son de ancho simple.** Los emoji (🌲, 🏠) ocupan dos
+columnas en la mayoría de las terminales y descuadran la grilla entera, así que
+están descartados por más lindos que sean.
+
+### De dónde sale la grilla
+
+`world/mapa/ubicaciones.py` dice dónde cae cada sala. Dos formas:
+
+- **`UBICACIONES`** — salas con celda propia: `(plano, x, y, z, tipo)`. Un
+  *plano* es un mapa independiente (`pueblo`, `escuela`, `hospital`, `cloacas`,
+  `parque`); dentro de él, `x` crece al este, `y` al norte y `z` es el piso.
+- **`ANCLADAS`** — interiores de una sola sala: solo el `tipo`. No ocupan
+  celda. Dibujar un mapa de una celda para el interior de un bar no le sirve a
+  nadie, así que cuando el jugador está adentro el minimapa muestra la calle de
+  la que se entra, con la marca sobre esa celda. El constructor resuelve el
+  ancla solo, mirando de dónde se entra.
+
+El pueblo entero —Old Silent Hill, Central y el área turística— es **un solo
+plano continuo**, así que caminando de punta a punta se ve cómo encaja la
+ciudad. La escuela, el hospital, las alcantarillas y el parque tienen plano
+propio.
+
+### Los muros los dicen las salidas, no los datos
+
+`world/mapa/render.py` no dibuja desde `ubicaciones.py`: recorre las **salidas
+reales** de cada sala. Entre dos celdas contiguas pone un espacio si hay paso y
+un muro si no. Si abrís un pasaje nuevo in-game, el mapa lo refleja sin tocar
+ningún dato.
+
+Un muro solo se dibuja entre dos salas que existen y no se comunican. Si de un
+lado no hay nada, el mapa termina ahí: el vacío ya dice que no se puede seguir,
+y llenarlo de muros lo vuelve ilegible.
+
+### Toda sala necesita un tipo
+
+`Room.at_object_creation()` le pone `tipo_mapa = "interior"` a cualquier sala
+que no lo traiga, y el validador del constructor rechaza el build si una sala
+no está ni en `UBICACIONES` ni en `ANCLADAS`, si está en las dos, o si dos
+salas se pisan en la misma celda. Una sala sin tipo se dibuja como `?`, para
+que salte a la vista.
+
+---
+
 ## Los archivos
 
 | Archivo | Qué es |
 |---|---|
 | `world/mapa/silent_hill.py` | **Los datos.** Salas, descripciones y conexiones. Es acá donde se agrega contenido. |
+| `world/mapa/ubicaciones.py` | **La geometría.** Dónde cae cada sala y con qué tipo se dibuja. |
+| `world/mapa/iconos.py` | El catálogo de tipos a caracteres, y los muros. |
+| `world/mapa/render.py` | Dibuja el mapa recorriendo las salidas reales. |
 | `world/mapa/constructor.py` | **La lógica.** Valida, borra el mapa anterior, construye el nuevo, escribe los dbrefs. |
 | `world/batch/silent_hill.py` | Punto de entrada del batchprocessor. Tres líneas. |
 
@@ -81,9 +158,15 @@ pasaje de una sola mano.
 ### Las validaciones
 
 `constructor.validar()` corre antes de tocar la base y aborta sin construir
-nada si encuentra: salas inexistentes en una conexión, dos salidas con el mismo
-nombre en la misma sala, salas sin ninguna conexión, o salas inalcanzables
-caminando desde el punto de partida.
+nada si encuentra:
+
+- salas inexistentes en una conexión,
+- dos salidas con el mismo nombre en la misma sala,
+- salas sin ninguna conexión,
+- salas inalcanzables caminando desde el punto de partida,
+- salas que no están ni en `UBICACIONES` ni en `ANCLADAS`, o que están en las
+  dos,
+- dos salas peleándose la misma celda del mapa.
 
 ### Qué se borra y qué no
 
@@ -182,5 +265,8 @@ Explanada, heladería, vuelta al mundo, montaña rusa y calesita.
   las alcantarillas, Indian Runner) están descritas como cerradas pero se
   cruzan igual.
 - No hay objetos ni NPCs. El mapa es geografía pura.
+- El minimapa no marca las escaleras: si una sala tiene salidas hacia otro
+  nivel, hay que entrar para enterarse. `mapa` sí dice en qué nivel estás y
+  cuántos tiene el plano.
 - El interior de la escuela y del hospital está resumido: hay una sala por zona
   significativa, no una por aula o consultorio.

@@ -1358,7 +1358,9 @@ CONEXIONES += [
     ("res_craig", "sur", "res_weaver", "norte"),
     ("res_craig", "oeste", "res_nathan", "este"),
     ("res_nathan", "sur", "res_bartlett", "norte"),
-    ("res_weaver", "oeste", "res_sandford", "este"),
+    # Sandford queda al sur de Weaver, no al oeste: así la traza cierra sobre
+    # la grilla del mapa sin que dos calles se pisen en la misma celda.
+    ("res_weaver", "sur", "res_sandford", "norte"),
     ("res_sandford", "oeste", "res_puente_sandford", "este"),
     ("res_puente_sandford", "oeste", "res_muelle", "este"),
     ("res_muelle", "norte", "res_faro", "sur"),
