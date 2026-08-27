@@ -35,6 +35,23 @@ docker compose logs -f game
 - `docker/entrypoint.sh` debe conservar finales de línea **LF** (ya está
   forzado en `.gitattributes`).
 
+## El mapa
+
+El mundo se genera desde datos, no se construye a mano in-game. Para agregar o
+cambiar salas se edita `world/mapa/silent_hill.py` y se reconstruye:
+
+```bash
+docker compose exec game evennia shell -c "from world.mapa.constructor import construir; construir()"
+docker compose restart game
+```
+
+El reinicio no es opcional: el punto de partida cambia de dbref en cada
+reconstrucción y vive en `server/conf/mapa_generado.py`, que es un archivo de
+settings. `docs/MAPA.md` tiene la traza completa y el formato de los datos.
+
+Nunca crear salas del mapa con `dig`/`tunnel` in-game: la próxima
+reconstrucción no las va a conocer y quedan colgadas.
+
 ## Diseño
 
 `docs/DISENO.md` tiene los pilares, la hoja de ruta por fases y las decisiones

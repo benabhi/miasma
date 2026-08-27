@@ -29,6 +29,8 @@ __pycache__
 # Installation-specific.
 # For group efforts, comment out some or all of these.
 server/conf/secret_settings.py
+# dbrefs del mapa: propios de cada base de datos, los regenera el constructor
+server/conf/mapa_generado.py
 server/logs/*.log.*
 server/.static/*
 server/.media/*

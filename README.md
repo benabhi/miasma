@@ -25,11 +25,12 @@ nada.
 ├── .env                   secretos locales (NO versionado)
 ├── .env.example           plantilla de .env
 ├── docs/
-│   └── DISENO.md          pilares de diseño y hoja de ruta de sistemas
+│   ├── DISENO.md          pilares de diseño y hoja de ruta de sistemas
+│   └── MAPA.md            el escenario de pruebas y cómo reconstruirlo
 ├── miasma/                ← EL GAMEDIR. Todo el código del juego.
 │   ├── commands/          comandos propios y cmdsets
 │   ├── typeclasses/       Character, Room, Object, Exit, Script
-│   ├── world/             prototipos, batches, contenido
+│   ├── world/             contenido: mapa, prototipos, batches
 │   ├── web/               cliente web, website, API
 │   └── server/conf/       settings.py y demás configuración
 └── .venv/                 Python del host, SOLO para autocompletado del editor
@@ -113,6 +114,25 @@ Destruye todo el mundo y todas las cuentas:
 docker compose down -v
 docker compose up -d
 ```
+
+---
+
+## El mapa de pruebas
+
+El mundo actual es una reconstrucción de la ciudad de *Silent Hill* (1999):
+104 salas, 238 salidas, con la escuela Midwich y el hospital Alchemilla
+recorribles por dentro. El juego arranca en el Café 5to2.
+
+Se genera entero desde datos y se reconstruye con un comando:
+
+```bash
+docker compose exec game evennia shell -c "from world.mapa.constructor import construir; construir()"
+docker compose restart game
+```
+
+o, desde el juego y como superusuario, `batchcode batch.silent_hill` (el
+reinicio hace falta igual). Detalles, traza y cómo agregar salas en
+[`docs/MAPA.md`](docs/MAPA.md).
 
 ---
 

@@ -140,6 +140,20 @@ DEBUG = os.environ.get("MIASMA_DEBUG", "0") == "1"
 IN_GAME_ERRORS = True
 
 ######################################################################
+# Punto de partida del mundo
+######################################################################
+
+# START_LOCATION y DEFAULT_HOME solo aceptan dbrefs, y los dbref cambian cada
+# vez que se reconstruye el mapa. Por eso el constructor
+# (world.mapa.constructor) escribe mapa_generado.py con los valores nuevos y
+# acá se importan. Si el archivo no existe todavía —base recién creada, mapa
+# sin construir— quedan los defaults de Evennia, que apuntan a Limbo.
+try:
+    from server.conf.mapa_generado import *
+except ImportError:
+    print("mapa_generado.py no encontrado: corré `batchcode batch.silent_hill`.")
+
+######################################################################
 # secret_settings.py sobrescribe todo lo de arriba (y está en .gitignore)
 ######################################################################
 try:
