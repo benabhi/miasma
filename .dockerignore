@@ -1,0 +1,7 @@
+# La imagen se construye desde ./docker y no copia código del juego,
+# pero mantenemos el contexto limpio igual.
+.git
+.venv
+miasma
+docs
+*.md

@@ -1,0 +1,71 @@
+# Stack de desarrollo de Miasma.
+#
+#   db    -> PostgreSQL, con los datos en un volumen de docker
+#   game  -> Evennia, con el gamedir ./miasma montado desde el host
+#
+# El código vive en el host y se monta; la imagen solo aporta el runtime.
+# Editar en ./miasma y hacer `evennia reload` (ver README) alcanza para ver
+# los cambios: no hace falta reconstruir nada.
+
+name: miasma
+
+services:
+  db:
+    image: postgres:17-alpine
+    container_name: miasma-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-miasma}
+      POSTGRES_USER: ${POSTGRES_USER:-miasma}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-miasma}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-miasma} -d ${POSTGRES_DB:-miasma}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    # La base no publica puerto al host: solo la ve la red interna del stack.
+    # Descomentar para engancharle un cliente SQL desde Windows.
+    # ports:
+    #   - "5432:5432"
+
+  game:
+    build:
+      context: ./docker
+      args:
+        EVENNIA_VERSION: ${EVENNIA_VERSION:-6.1.0}
+    image: miasma/game:${EVENNIA_VERSION:-6.1.0}
+    container_name: miasma-game
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      MIASMA_DB_HOST: db
+      MIASMA_DB_PORT: 5432
+      MIASMA_DB_NAME: ${POSTGRES_DB:-miasma}
+      MIASMA_DB_USER: ${POSTGRES_USER:-miasma}
+      MIASMA_DB_PASSWORD: ${POSTGRES_PASSWORD:-miasma}
+      MIASMA_DEBUG: ${MIASMA_DEBUG:-1}
+      # Cuenta #1. Evennia las lee al detectar que no existe y la crea sin
+      # prompts; si ya existe, se ignoran.
+      EVENNIA_SUPERUSER_USERNAME: ${EVENNIA_SUPERUSER_USERNAME:-}
+      EVENNIA_SUPERUSER_EMAIL: ${EVENNIA_SUPERUSER_EMAIL:-}
+      EVENNIA_SUPERUSER_PASSWORD: ${EVENNIA_SUPERUSER_PASSWORD:-}
+    volumes:
+      # El codebase, montado desde afuera. Es LA fuente de verdad del código.
+      - ./miasma:/usr/src/game
+    ports:
+      - "4000:4000"  # telnet, para el cliente MUD
+      - "4001:4001"  # web + admin de Django
+      - "4002:4002"  # websocket del cliente web
+    # Necesarios para poder hacer `docker compose exec game evennia shell`
+    # y que la consola interactiva se comporte.
+    stdin_open: true
+    tty: true
+
+volumes:
+  db_data:
+    name: miasma_db_data

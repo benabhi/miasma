@@ -1,0 +1,19 @@
+# Entorno de Python del host (solo para el editor/linter; el juego corre en docker)
+.venv/
+venv/
+
+# Secretos y config local
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+
+# Editores
+.idea/
+.vscode/
+*.swp
+
+# SO
+Thumbs.db
+desktop.ini
