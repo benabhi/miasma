@@ -22,10 +22,108 @@ several more options for customizing the Guest account system.
 
 """
 
+from django.conf import settings
+
 from evennia.accounts.accounts import DefaultAccount, DefaultGuest
 
+_MAX_NR_CHARACTERS = settings.MAX_NR_CHARACTERS
 
-class Account(DefaultAccount):
+
+class PantallaOOCEnEspanol:
+    """
+    Mixin que traduce la pantalla que se ve fuera de personaje.
+
+    Evennia arma esa pantalla en `DefaultAccount.at_look()` con strings
+    hardcodeados (no pasan por gettext), así que el catálogo de traducción no
+    la alcanza y hay que reescribir el método. Es la primera pantalla que ve
+    alguien después de identificarse, así que no puede quedar en inglés.
+
+    Los comandos que menciona son los nuestros: `crearpj`, `borrarpj`,
+    `encarnar` y `desencarnar`.
+    """
+
+    ooc_appearance_template = """
+--------------------------------------------------------------------
+{header}
+
+{sessions}
+
+  |wayuda|n - ver todos los comandos
+  |wcrearpj <nombre> [=descripción]|n - crear un personaje
+  |wborrarpj <nombre>|n - borrar un personaje
+  |wencarnar <nombre>|n - entrar al juego con ese personaje
+  |wencarnar|n - entrar con el último que jugaste (|wdesencarnar|n para volver acá)
+
+{characters}
+{footer}
+--------------------------------------------------------------------
+""".strip()
+
+    def at_look(self, target=None, session=None, **kwargs):
+        from evennia.utils.utils import is_iter
+
+        if target and not is_iter(target):
+            if hasattr(target, "return_appearance"):
+                return target.return_appearance(self)
+            return f"{target} no tiene apariencia dentro del juego."
+
+        personajes = list(t for t in target if t) if target else []
+        sesiones = self.sessions.all()
+        if not sesiones:
+            return ""
+
+        cabecera = f"Cuenta |g{self.name}|n (estás fuera de personaje)"
+
+        lineas = []
+        for indice, sesion in enumerate(sesiones, start=1):
+            ip = sesion.address[0] if isinstance(sesion.address, tuple) else sesion.address
+            marca = (
+                f"|w* {indice}|n"
+                if session and session.sessid == sesion.sessid
+                else f"  {indice}"
+            )
+            lineas.append(f"{marca} {sesion.protocol_key} ({ip})")
+        txt_sesiones = "|wSesiones abiertas:|n\n" + "\n".join(lineas)
+
+        if not personajes:
+            txt_personajes = "Todavía no tenés personaje. Usá |wcrearpj|n."
+        else:
+            maximo = (
+                "sin límite"
+                if self.is_superuser or _MAX_NR_CHARACTERS is None
+                else _MAX_NR_CHARACTERS
+            )
+            filas = []
+            for pj in personajes:
+                permisos = ", ".join(pj.permissions.all())
+                suyas = pj.sessions.all()
+                if not suyas:
+                    filas.append(f" - {pj.name} [{permisos}]")
+                    continue
+                for sesion in suyas:
+                    numero = sesion in sesiones and sesiones.index(sesion) + 1
+                    if sesion and numero:
+                        filas.append(
+                            f" - |G{pj.name}|n [{permisos}] "
+                            f"(lo estás jugando en la sesión {numero})"
+                        )
+                    else:
+                        filas.append(
+                            f" - |R{pj.name}|n [{permisos}] (lo está jugando otro)"
+                        )
+            txt_personajes = (
+                f"Tus personajes ({len(personajes)}/{maximo}, "
+                "|wencarnar <nombre>|n para jugar):|n\n" + "\n".join(filas)
+            )
+
+        return self.ooc_appearance_template.format(
+            header=cabecera,
+            sessions=txt_sesiones,
+            characters=txt_personajes,
+            footer="",
+        )
+
+class Account(PantallaOOCEnEspanol, DefaultAccount):
     """
     An Account is the actual OOC player entity. It doesn't exist in the game,
     but puppets characters.
@@ -139,7 +237,7 @@ class Account(DefaultAccount):
     pass
 
 
-class Guest(DefaultGuest):
+class Guest(PantallaOOCEnEspanol, DefaultGuest):
     """
     This class is used for guest logins. Unlike Accounts, Guests and their
     characters are deleted after disconnection.

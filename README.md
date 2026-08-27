@@ -26,6 +26,7 @@ nada.
 ├── .env.example           plantilla de .env
 ├── docs/
 │   ├── DISENO.md          pilares de diseño y hoja de ruta de sistemas
+│   ├── TRADUCCION.md      cómo y dónde se traduce cada cosa
 │   └── MAPA.md            el escenario de pruebas y cómo reconstruirlo
 ├── miasma/                ← EL GAMEDIR. Todo el código del juego.
 │   ├── commands/          comandos propios y cmdsets
@@ -133,6 +134,27 @@ docker compose restart game
 o, desde el juego y como superusuario, `batchcode batch.silent_hill` (el
 reinicio hace falta igual). Detalles, traza y cómo agregar salas en
 [`docs/MAPA.md`](docs/MAPA.md).
+
+---
+
+## Idioma
+
+El juego se juega en español. Los comandos de jugador tienen nombre español
+(`mirar`, `tomar`, `inventario`, `decir`, `ayuda`) y **conservan el nombre en
+inglés como alias**, así que `look` sigue funcionando.
+
+Los mensajes del motor salen de un catálogo propio del gamedir
+(`miasma/locale/es/LC_MESSAGES/django.po`, 221/221 strings) que pisa al de
+Evennia sin tocar `site-packages`. El `.mo` lo compila el entrypoint en cada
+arranque, así que **cambiar una traducción necesita reiniciar**, no alcanza con
+`reload`:
+
+```bash
+docker compose restart game
+```
+
+Los comandos, en cambio, son código: con `evennia reload` alcanza. Detalles y
+deuda conocida en [`docs/TRADUCCION.md`](docs/TRADUCCION.md).
 
 ---
 

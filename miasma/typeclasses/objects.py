@@ -11,16 +11,96 @@ with a location in the game world (like Characters, Rooms, Exits).
 from evennia.objects.objects import DefaultObject
 
 
+# Palabras que cortan el núcleo del sintagma: de acá en adelante ya no se
+# pluraliza. "lata de duraznos" -> "latas de duraznos", no "latas des duraznoss".
+CORTES = frozenset(
+    ("de", "del", "con", "en", "a", "al", "para", "por", "sin", "sobre", "tras", "que")
+)
+
+
+def pluralizar(palabra):
+    """
+    Plural aproximado en español de una sola palabra.
+
+    Cubre las reglas regulares, que es lo que aparece en los nombres de objeto:
+    vocal + s, consonante + es, -z -> -ces, y las invariables terminadas en -s
+    o -x. No maneja la pérdida de tilde (canción -> canciones); para esos casos
+    conviene nombrar el objeto de otra forma desde el prototipo.
+
+    """
+    if not palabra:
+        return palabra
+    ultima = palabra[-1].lower()
+    if ultima in "aeiouáéíóú":
+        return palabra + "s"
+    if ultima == "z":
+        return palabra[:-1] + "ces"
+    if ultima in "sx":
+        return palabra
+    return palabra + "es"
+
+
+def pluralizar_frase(frase):
+    """
+    Pluraliza el núcleo de un nombre de objeto y los adjetivos que lo siguen.
+
+    Se pluraliza desde la primera palabra hasta la primera preposición, que es
+    donde en español termina el núcleo del sintagma:
+
+        "cuchillo oxidado"   -> "cuchillos oxidados"
+        "lata de duraznos"   -> "latas de duraznos"
+
+    """
+    salida = []
+    cortado = False
+    for palabra in frase.split(" "):
+        if cortado or palabra.lower() in CORTES:
+            cortado = True
+            salida.append(palabra)
+        else:
+            salida.append(pluralizar(palabra))
+    return " ".join(salida)
+
+
 class ObjectParent:
     """
-    This is a mixin that can be used to override *all* entities inheriting at
-    some distance from DefaultObject (Objects, Exits, Characters and Rooms).
+    Mixin que se aplica a *todo* lo que desciende de DefaultObject: objetos,
+    salidas, personajes y salas.
 
-    Just add any method that exists on `DefaultObject` to this class. If one
-    of the derived classes has itself defined that same hook already, that will
-    take precedence.
+    Cualquier método de `DefaultObject` puede sobrescribirse acá. Si una clase
+    derivada define el mismo hook, gana la derivada.
 
     """
+
+    def get_numbered_name(self, count, looker, **kwargs):
+        """
+        Formas singular y plural del nombre, en español.
+
+        La versión de Evennia usa `inflect`, que es inglés: antepone el
+        artículo ("an una lata de duraznos") y pluraliza en inglés
+        ("two latas"). Acá el singular es el nombre tal cual —en español el
+        artículo forma parte del nombre que le pone el constructor— y el plural
+        antepone el número y pluraliza la primera palabra, que en un sintagma
+        nominal español es casi siempre el núcleo:
+
+            "lata de duraznos"  ->  "3 latas de duraznos"
+
+        """
+        clave = str(kwargs.get("key", self.get_display_name(looker)))
+        plural = pluralizar_frase(clave)
+
+        # Registrar el plural como alias, para que `mirar latas` encuentre al
+        # objeto igual que `mirar lata`.
+        if not self.aliases.get(plural, category=self.plural_category):
+            self.aliases.clear(category=self.plural_category)
+            self.aliases.add(plural, category=self.plural_category)
+
+        singular = clave
+        plural_contado = f"{count} {plural}"
+
+        if kwargs.get("return_string"):
+            return singular if count == 1 else plural_contado
+        return singular, plural_contado
 
 
 class Object(ObjectParent, DefaultObject):

@@ -12,7 +12,16 @@ rm -f server/*.pid server/*.restart 2>/dev/null || true
 #    El SECRET_KEY se genera acá y queda en el host (está en .gitignore).
 evennia --initmissing || true
 
-# 3. Esperar a Postgres. El healthcheck de compose ya lo cubre, pero un reinicio
+# 3. Compilar los catálogos de traducción. El .po se versiona, el .mo es un
+#    artefacto de build y está en .gitignore, así que se regenera acá en cada
+#    arranque. Django lee únicamente el .mo.
+for _po in locale/*/LC_MESSAGES/django.po; do
+    [ -f "$_po" ] || continue
+    echo "==> compilando catálogo ${_po} ..."
+    msgfmt --check -o "${_po%.po}.mo" "$_po"
+done
+
+# 4. Esperar a Postgres. El healthcheck de compose ya lo cubre, pero un reinicio
 #    de la base con el juego arriba no debería tumbar el contenedor.
 if [ -n "${MIASMA_DB_HOST:-}" ]; then
     echo "==> esperando a Postgres en ${MIASMA_DB_HOST}:${MIASMA_DB_PORT:-5432} ..."
@@ -40,11 +49,11 @@ sys.exit(1)
 PY
 fi
 
-# 4. Migraciones. Idempotente: si no hay nada nuevo, no hace nada.
+# 5. Migraciones. Idempotente: si no hay nada nuevo, no hace nada.
 echo "==> aplicando migraciones ..."
 evennia migrate --noinput
 
-# 5. Aviso: si no existe la Cuenta #1 y no hay credenciales en el entorno,
+# 6. Aviso: si no existe la Cuenta #1 y no hay credenciales en el entorno,
 #    Evennia abre un prompt interactivo y el contenedor se cuelga esperando
 #    algo que nadie va a tipear. Las variables EVENNIA_SUPERUSER_* son el
 #    mecanismo propio del framework para crearla sin interacción (las lee

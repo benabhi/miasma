@@ -22,8 +22,14 @@ docker compose logs -f game
 ## Convenciones
 
 - **Todo el contenido de cara al jugador va en español rioplatense** (voseo):
-  descripciones, mensajes de error, ayuda, nombres de comandos. `LANGUAGE_CODE`
-  está en `"es"`.
+  descripciones, mensajes de error, ayuda, nombres de comandos.
+- **Antes de traducir un texto, averiguá de dónde sale.** Si es del motor va al
+  catálogo `miasma/locale/es/LC_MESSAGES/django.po` (y hace falta
+  `docker compose restart game`, no `reload`); si es de un comando va a
+  `commands/jugador.py`, `commands/cuenta.py` o `commands/sin_loguear.py`.
+  `docs/TRADUCCION.md` tiene el detalle.
+- **Un comando traducido lleva siempre su nombre en inglés como alias**, y hay
+  que sacar el original del cmdset con `remove()`: si no, Evennia da multimatch.
 - **Código y comentarios en español.** Nombres de clases y funciones en inglés
   cuando son de la API de Evennia (`at_object_creation`, `return_appearance`);
   los propios, en español.

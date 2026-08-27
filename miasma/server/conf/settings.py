@@ -36,6 +36,13 @@ GAME_SLOGAN = "El aire está enfermo. Vos también, todavía no lo sabés."
 USE_I18N = True
 LANGUAGE_CODE = "es"
 
+# Catálogo de traducción propio. Django mergea los catálogos de LOCALE_PATHS
+# DESPUÉS de los de las apps instaladas, con un dict.update() (ver
+# django/utils/translation/trans_real.py, _add_local_translations), así que
+# esto pisa string por string al catálogo que trae Evennia sin tocar
+# site-packages. El .po se versiona; el .mo lo compila el entrypoint.
+LOCALE_PATHS = [os.path.join(GAME_DIR, "locale")]
+
 # Zona horaria del servidor (afecta logs y el admin de Django, no el reloj
 # in-game, que se maneja con TIME_FACTOR / TIME_GAME_EPOCH más abajo).
 TIME_ZONE = "America/Argentina/Buenos_Aires"
