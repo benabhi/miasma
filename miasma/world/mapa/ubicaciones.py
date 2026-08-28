@@ -70,18 +70,42 @@ LEYENDA = {
 #       x  0 1 2 3 4 5 6 7 8 9 10
 # --------------------------------------------------------------------------
 
+# El pueblo es una retícula de calles con manzanas de 2x2: hay calle cada
+# tres celdas en los dos ejes, y lo que queda entre ellas son las manzanas.
+# Ese patrón es lo que hace que el mapa se lea como una ciudad y no como una
+# lista de cruces sueltos.
+#
+#   Old Silent Hill   x 0..9   y 12..21   calles en x 0,3,6,9  y 12,15,18,21
+#   canal             x 10..11            con el puente levadizo en y 12
+#   Central           x 12..18 y 12..21   calles en x 12,15,18  y 12,15,18,21
+#   área turística    x 12..18 y 0..11    calles en x 12,15,18  y 0,3,6,9
+#   lago Toluca       x 0..11  y 0..11
+#
+# Bachman Road (x 9 y x 18) es la arteria: cruza el pueblo entero.
 PUEBLO = """
-Tdcld~~TTTT
-hdchs~~TTTT
-ldchs~~TTTT
-hdEgg~~cPsT
-esEiappsHeT
-TTTTT~~eeeT
-TTTTT~~dVaT
-~~~~~~~vva*
-~~~~~~~vasT
-~~~~~~~!MhT
-~~~~~~~&pcT
+TTTTTTTTTd~~TTTTTTTT
+xccxccxcca~~xccxccaT
+chhchhcssa~~cPPcssaT
+chhchhcdda~~cPPcseaT
+xccxccxcca~~xccxccaT
+chhchhcssa~~csscHHaT
+chlchdcgga~~csdcHHaT
+xccxccxcca~~xccxccaT
+csscEEciga~~ceeceeaT
+csdcEEciga~~ceeceeaT
+xccxccxccappxccVccaT
+~~~~~~~~~~~~ceecMMaT
+~~~~~~~~~~~~ceecMMaT
+~~~~~~~~~~~~xccxcca*
+~~~~~~~~~~~~chhcssaT
+~~~~~~~~~~~~chhcssaT
+~~~~~~~~~~~pxccxccaT
+~~~~~~~~~~~~csdcsMaT
+~~~~~~~~~~~~csdcMMaT
+~~~~~~~~~~~!xccxccaT
+~~~~~~~~~~~~cddcddaT
+~~~~~~~~~~~~cddcddaT
+~~~~~~~~~~~&xccxccaT
 """
 
 ESCUELA_PB = """
@@ -205,52 +229,75 @@ NOMBRES_PLANO = {clave: spec["nombre"] for clave, spec in PLANOS.items()}
 # --------------------------------------------------------------------------
 
 NOMBRADAS = {
-    # --- Old Silent Hill ---------------------------------------------------
-    "osh_callejon_gordon": ("pueblo", 0, 8, 0),
-    "osh_finney_bradbury": ("pueblo", 1, 9, 0),
-    "osh_finney_midwich": ("pueblo", 2, 9, 0),
-    "osh_finney_levin": ("pueblo", 3, 9, 0),
-    "osh_finney_bachman": ("pueblo", 4, 9, 0),
-    "osh_matheson_bradbury": ("pueblo", 1, 8, 0),
-    "osh_matheson_midwich": ("pueblo", 2, 8, 0),
-    "osh_matheson_levin": ("pueblo", 3, 8, 0),
-    "osh_matheson_bachman": ("pueblo", 4, 8, 0),
-    "osh_ellroy_bradbury": ("pueblo", 1, 7, 0),
-    "osh_ellroy_midwich": ("pueblo", 2, 7, 0),
-    "osh_ellroy_levin": ("pueblo", 3, 7, 0),
-    "osh_ellroy_bachman": ("pueblo", 4, 7, 0),
-    "osh_bloch_bradbury": ("pueblo", 1, 6, 0),
-    "osh_bloch_midwich": ("pueblo", 2, 6, 0),
-    "osh_bloch_levin": ("pueblo", 3, 6, 0),
-    "osh_bloch_bachman": ("pueblo", 4, 6, 0),
-    "osh_bachman_norte": ("pueblo", 4, 10, 0),
-    "osh_callejon_basket": ("pueblo", 3, 10, 0),
-    "osh_puente_levadizo": ("pueblo", 5, 6, 0),
+    # --- Old Silent Hill: cruces -------------------------------------------
+    #     Bradbury x0 · Midwich x3 · Levin x6 · Bachman x9
+    #     Bloch y12 · Ellroy y15 · Matheson y18 · Finney y21
+    "osh_finney_bradbury": ("pueblo", 0, 21, 0),
+    "osh_finney_midwich": ("pueblo", 3, 21, 0),
+    "osh_finney_levin": ("pueblo", 6, 21, 0),
+    "osh_finney_bachman": ("pueblo", 9, 21, 0),
+    "osh_matheson_bradbury": ("pueblo", 0, 18, 0),
+    "osh_matheson_midwich": ("pueblo", 3, 18, 0),
+    "osh_matheson_levin": ("pueblo", 6, 18, 0),
+    "osh_matheson_bachman": ("pueblo", 9, 18, 0),
+    "osh_ellroy_bradbury": ("pueblo", 0, 15, 0),
+    "osh_ellroy_midwich": ("pueblo", 3, 15, 0),
+    "osh_ellroy_levin": ("pueblo", 6, 15, 0),
+    "osh_ellroy_bachman": ("pueblo", 9, 15, 0),
+    "osh_bloch_bradbury": ("pueblo", 0, 12, 0),
+    "osh_bloch_midwich": ("pueblo", 3, 12, 0),
+    "osh_bloch_levin": ("pueblo", 6, 12, 0),
+    "osh_bloch_bachman": ("pueblo", 9, 12, 0),
+    "osh_bachman_norte": ("pueblo", 9, 22, 0),
+    "osh_callejon_basket": ("pueblo", 8, 19, 0),
+    "osh_callejon_gordon": ("pueblo", 2, 16, 0),
+    "osh_puente_levadizo": ("pueblo", 10, 12, 0),
+    # --- Old Silent Hill: lo que hay en las manzanas -----------------------
+    "int_cafe_5to2": ("pueblo", 8, 20, 0),
+    "int_tienda": ("pueblo", 7, 20, 0),
+    "int_queen_burger": ("pueblo", 8, 17, 0),
+    "int_casa_levin": ("pueblo", 5, 17, 0),
+    "int_casa_gordon": ("pueblo", 1, 16, 0),
+    "int_iglesia_balkan": ("pueblo", 7, 13, 0),
+    "int_cut_rite": ("pueblo", 1, 13, 0),
+    "int_estacion_servicio": ("pueblo", 8, 16, 0),
     # --- Central Silent Hill -----------------------------------------------
-    "csh_cabecera_puente": ("pueblo", 6, 6, 0),
-    "csh_crichton_simmons": ("pueblo", 7, 7, 0),
-    "csh_crichton_sagan": ("pueblo", 8, 7, 0),
-    "csh_crichton_bachman": ("pueblo", 9, 7, 0),
-    "csh_koontz_simmons": ("pueblo", 7, 6, 0),
-    "csh_koontz_sagan": ("pueblo", 8, 6, 0),
-    "csh_koontz_bachman": ("pueblo", 9, 6, 0),
-    "csh_munson_simmons": ("pueblo", 7, 5, 0),
-    "csh_munson_sagan": ("pueblo", 8, 5, 0),
-    "csh_munson_bachman": ("pueblo", 9, 5, 0),
-    "csh_katz_simmons": ("pueblo", 7, 4, 0),
-    "csh_katz_sagan": ("pueblo", 8, 4, 0),
-    "csh_katz_bachman": ("pueblo", 9, 4, 0),
+    #     Simmons x12 · Sagan x15 · Bachman x18
+    #     Katz y12 · Munson y15 · Koontz y18 · Crichton y21
+    "csh_cabecera_puente": ("pueblo", 11, 12, 0),
+    "csh_crichton_simmons": ("pueblo", 12, 21, 0),
+    "csh_crichton_sagan": ("pueblo", 15, 21, 0),
+    "csh_crichton_bachman": ("pueblo", 18, 21, 0),
+    "csh_koontz_simmons": ("pueblo", 12, 18, 0),
+    "csh_koontz_sagan": ("pueblo", 15, 18, 0),
+    "csh_koontz_bachman": ("pueblo", 18, 18, 0),
+    "csh_munson_simmons": ("pueblo", 12, 15, 0),
+    "csh_munson_sagan": ("pueblo", 15, 15, 0),
+    "csh_munson_bachman": ("pueblo", 18, 15, 0),
+    "csh_katz_simmons": ("pueblo", 12, 12, 0),
+    "csh_katz_sagan": ("pueblo", 15, 12, 0),
+    "csh_katz_bachman": ("pueblo", 18, 12, 0),
+    "int_comisaria": ("pueblo", 14, 20, 0),
+    "int_green_lion": ("pueblo", 17, 20, 0),
+    "int_cafe_sun": ("pueblo", 13, 17, 0),
+    "int_town_center": ("pueblo", 13, 14, 0),
     # --- Área turística ----------------------------------------------------
-    "res_bachman": ("pueblo", 9, 3, 0),
-    "res_entrada_parque": ("pueblo", 10, 3, 0),
-    "res_nathan": ("pueblo", 8, 2, 0),
-    "res_craig": ("pueblo", 9, 2, 0),
-    "res_faro": ("pueblo", 7, 1, 0),
-    "res_bartlett": ("pueblo", 8, 1, 0),
-    "res_weaver": ("pueblo", 9, 1, 0),
-    "res_muelle": ("pueblo", 7, 0, 0),
-    "res_puente_sandford": ("pueblo", 8, 0, 0),
-    "res_sandford": ("pueblo", 9, 0, 0),
+    #     Sandford x12 · Nathan Ave x15 · Bachman x18
+    "res_bachman": ("pueblo", 18, 11, 0),
+    "res_craig": ("pueblo", 18, 9, 0),
+    "res_weaver": ("pueblo", 18, 6, 0),
+    "res_nathan": ("pueblo", 15, 6, 0),
+    "res_bartlett": ("pueblo", 15, 3, 0),
+    "res_sandford": ("pueblo", 12, 3, 0),
+    "res_muelle": ("pueblo", 11, 0, 0),
+    "res_faro": ("pueblo", 11, 3, 0),
+    "res_puente_sandford": ("pueblo", 11, 6, 0),
+    "res_entrada_parque": ("pueblo", 19, 9, 0),
+    "int_annies_bar": ("pueblo", 17, 8, 0),
+    "int_bowl_o_rama": ("pueblo", 16, 8, 0),
+    "int_indian_runner": ("pueblo", 13, 5, 0),
+    "int_motel_recepcion": ("pueblo", 17, 5, 0),
+    "int_hotel_lakeview": ("pueblo", 16, 11, 0),
     # --- Escuela Midwich ---------------------------------------------------
     "esc_entrada": ("escuela", 1, 0, 0),
     "esc_recepcion": ("escuela", 1, 1, 0),
@@ -298,26 +345,9 @@ NOMBRADAS = {
 # --------------------------------------------------------------------------
 
 ANCLADAS = {
-    "int_cafe_5to2": "comercio",
-    "int_tienda": "comercio",
-    "int_queen_burger": "comercio",
-    "int_casa_levin": "casa",
-    "int_casa_gordon": "casa",
-    "int_iglesia_balkan": "iglesia",
-    "int_cut_rite": "comercio",
-    "int_estacion_servicio": "industria",
     "osh_torre_control": "industria",
-    "int_comisaria": "comisaria",
-    "int_green_lion": "comercio",
-    "int_cafe_sun": "comercio",
-    "int_town_center": "edificio",
-    "int_annies_bar": "comercio",
-    "int_indian_runner": "comercio",
-    "int_motel_recepcion": "hotel",
     "int_motel_hab3": "interior",
     "int_motel_garage": "industria",
-    "int_bowl_o_rama": "comercio",
-    "int_hotel_lakeview": "hotel",
     "esc_enfermeria": "sala",
     "esc_aula_pb": "sala",
     "esc_torre_reloj": "interior",

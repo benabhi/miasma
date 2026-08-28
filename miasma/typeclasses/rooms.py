@@ -33,9 +33,11 @@ from .objects import ObjectParent
 # del cliente.
 ANCHO_POR_DEFECTO = 78
 
-# Celdas a cada lado del centro en el minimapa de `mirar`. Chico a propósito:
-# es una ayuda de orientación, no el mapa. Para el mapa está el comando `mapa`.
-RADIO_MINIMAPA = 2
+# Celdas a cada lado del centro en el minimapa de `mirar`. Con 3 entra una
+# manzana entera con sus calles alrededor, que es lo mínimo para orientarse en
+# una retícula con calle cada tres celdas. Más que eso le come ancho a la
+# descripción; para ver todo está el comando `mapa`.
+RADIO_MINIMAPA = 3
 
 
 class Room(ObjectParent, DefaultRoom):

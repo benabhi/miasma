@@ -4,7 +4,7 @@ Escenario de pruebas de Miasma: una reconstrucción de la ciudad de *Silent Hill
 (Konami, 1999). No es contenido definitivo — es un mundo conocido y de tamaño
 razonable sobre el que probar cada sistema nuevo a medida que se incorpora.
 
-**116 salas, 311 salidas, 5 planos.** El juego arranca en el Café 5to2.
+**309 salas, 1091 salidas, 5 planos.** El juego arranca en el Café 5to2.
 
 ---
 
@@ -54,17 +54,29 @@ un carácter por celda:
 
 ```python
 PUEBLO = """
-Tdcld~~TTTT
-hdchs~~TTTT
-ldchs~~TTTT
-hdEgg~~cPsT
-esEiappsHeT
-TTTTT~~eeeT
-TTTTT~~dVaT
-~~~~~~~vva*
-~~~~~~~vasT
-~~~~~~~!MhT
-~~~~~~~&pcT
+TTTTTTTTTd~~TTTTTTTT
+xccxccxcca~~xccxccaT
+chhchhcssa~~cPPcssaT
+chhchhcdda~~cPPcseaT
+xccxccxcca~~xccxccaT
+chhchhcssa~~csscHHaT
+chlchdcgga~~csdcHHaT
+xccxccxcca~~xccxccaT
+csscEEciga~~ceeceeaT
+csdcEEciga~~ceeceeaT
+xccxccxccappxccVccaT
+~~~~~~~~~~~~ceecMMaT
+~~~~~~~~~~~~ceecMMaT
+~~~~~~~~~~~~xccxcca*
+~~~~~~~~~~~~chhcssaT
+~~~~~~~~~~~~chhcssaT
+~~~~~~~~~~~pxccxccaT
+~~~~~~~~~~~~csdcsMaT
+~~~~~~~~~~~~csdcMMaT
+~~~~~~~~~~~!xccxccaT
+~~~~~~~~~~~~cddcddaT
+~~~~~~~~~~~~cddcddaT
+~~~~~~~~~~~&xccxccaT
 """
 ```
 
@@ -81,16 +93,17 @@ escrita a mano siempre le gana a la automática.
 ### Salas con nombre y salas de relleno
 
 - Las salas escritas en `silent_hill.py` reclaman su celda en `NOMBRADAS`, y
-  usan su nombre y su descripción propios. Son 79.
+  usan su nombre y su descripción propios. Son 96.
 - Las celdas que no reclamó nadie las llena el constructor con salas genéricas
   según el tipo, desde la tabla `RELLENO` ("Calzada", "Baldío", "Casa
-  abandonada"…). Son 12. Existen para que la grilla quede densa sin tener que
+  abandonada"…). Son 205. Existen para que la grilla quede densa sin tener que
   escribir doscientas descripciones; el detalle está en las salas con nombre.
 - `ANCLADAS` son los interiores de una sola sala. No ocupan celda: dibujar un
   mapa de 1×1 para el interior de un bar no le sirve a nadie, así que cuando el
   jugador está adentro se dibuja la calle de la que entró, con la marca sobre
-  esa celda. Son 25, y el constructor resuelve el ancla solo mirando de dónde
-  se entra.
+  esa celda. Son 8 —la torre del puente, la habitación y el garage del motel,
+  la enfermería y el aula de la escuela— y el constructor resuelve el ancla
+  solo, mirando de dónde se entra.
 
 ### El agua no es una sala
 
@@ -110,16 +123,20 @@ y las cosas. Se redibuja solo en cada movimiento, porque lo arma
 `Room.return_appearance()` (`typeclasses/rooms.py`).
 
 ```
-┌─────────┐   Finney St. y Bachman Rd.
-│░ : . ~ ~│
-│░ n @ ~ ~│   La niebla lo come todo a diez metros. Cae ceniza, mansa, como
-│░ n $ ~ ~│   nieve sucia.
-│E % % ~ ~│
-│E + ▓ = =│   El cruce más transitado del barrio viejo, en otra vida. Un
-└─────────┘   semáforo cuelga muerto sobre el medio de la calle y se mece sin
-              viento.
-Salidas: oeste, norte, sur, café y tienda
+┌─────────────┐   Café 5to2
+│T T T T . ~ ~│
+│░ ▒ ░ ░ ▓ ~ ~│   Un bar de esquina de doce mesas, con piso de damero y bancos
+│n ░ $ @ ▓ ~ ~│   de cuerina roja rajada. La vidriera que da a Finney está
+│n ░ . . ▓ ~ ~│   reventada hacia adentro y el vidrio cruje bajo cualquier
+│░ ▒ ░ ░ ▓ ~ ~│   paso.
+│n ░ $ $ ▓ ~ ~│
+│. ░ % % ▓ ~ ~│   Sobre el mostrador, junto a una taza con café frío y una
+└─────────────┘   raya de carmín en el borde, hay una radio portátil...
+Salidas: fuera, norte, sur y oeste
 ```
+
+El radio es de 3 celdas: con la calle cada tres, entra una manzana entera con
+sus calles alrededor, que es lo mínimo para orientarse en una retícula.
 
 `mapa` (alias `map`) muestra el plano entero con una referencia de símbolos.
 Acepta un radio: `mapa 5`.
@@ -233,21 +250,33 @@ metro.
 
 El pueblo entero es **un solo plano continuo**: Old Silent Hill al noroeste, el
 canal en el medio con el puente levadizo, el centro al este y el área turística
-bajando hacia el lago Toluca.
+bajando hacia el lago Toluca. Hay calle cada tres celdas en los dos ejes, y
+entre ellas las manzanas de 2×2.
 
 ```
-         Old Silent Hill    canal    Central       parque
-   y10   T . ░ : .          ~ ~      T T T T
-    y9   n . ░ n $          ~ ~      T T T T
-    y8   : . ░ n $          ~ ~      T T T T
-    y7   n . E % %          ~ ~      ░ P $  T
-    y6   # $ E + ▓          = =      $ H #  T    <- puente levadizo
-    y5   T T T T T          ~ ~      # # #  T
-    y4   T T T T T          ~ ~      . v ▓  T
-    y3        lago Toluca             , , ▓ *    <- entrada al parque
-    y2                                , ▓ $ T
-    y1                                ! M n T
-    y0                                & = ░ T
+T T T T T T T T T . ~ ~ T T T T T T T T
+▒ ░ ░ ▒ ░ ░ ▒ ░ ░ ▓ ~ ~ ▒ ░ ░ ▒ ░ ░ ▓ T
+░ n n ░ n n ░ $ $ ▓ ~ ~ ░ P P ░ $ $ ▓ T
+░ n n ░ n n ░ . . ▓ ~ ~ ░ P P ░ $ # ▓ T
+▒ ░ ░ ▒ ░ ░ ▒ ░ ░ ▓ ~ ~ ▒ ░ ░ ▒ ░ ░ ▓ T
+░ n n ░ n n ░ $ $ ▓ ~ ~ ░ $ $ ░ H H ▓ T
+░ n : ░ n . ░ % % ▓ ~ ~ ░ $ . ░ H H ▓ T
+▒ ░ ░ ▒ ░ ░ ▒ ░ ░ ▓ ~ ~ ▒ ░ ░ ▒ ░ ░ ▓ T
+░ $ $ ░ E E ░ + % ▓ ~ ~ ░ # # ░ # # ▓ T
+░ $ . ░ E E ░ + % ▓ ~ ~ ░ # # ░ # # ▓ T
+▒ ░ ░ ▒ ░ ░ ▒ ░ ░ ▓ = = ▒ ░ ░ v ░ ░ ▓ T
+~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ░ # # ░ M M ▓ T
+~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ░ # # ░ M M ▓ T
+~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ▒ ░ ░ ▒ ░ ░ ▓ *
+~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ░ n n ░ $ $ ▓ T
+~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ░ n n ░ $ $ ▓ T
+~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ = ▒ ░ ░ ▒ ░ ░ ▓ T
+~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ░ $ . ░ $ M ▓ T
+~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ░ $ . ░ M M ▓ T
+~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ! ▒ ░ ░ ▒ ░ ░ ▓ T
+~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ░ . . ░ . . ▓ T
+~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ░ . . ░ . . ▓ T
+~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ & ▒ ░ ░ ▒ ░ ░ ▓ T
 ```
 
 La escuela, el hospital, las alcantarillas y el parque tienen plano propio, con
@@ -275,6 +304,6 @@ sus niveles:
 - El minimapa no marca las escaleras: si una sala tiene salidas hacia otro
   nivel, hay que entrar para enterarse. `mapa` sí dice en qué nivel estás y
   cuántos tiene el plano.
-- Las 12 salas de relleno comparten descripción por tipo: hay tres "Calzada"
-  idénticas. A medida que el pueblo importe, conviene irlas ascendiendo a salas
-  con nombre propio.
+- Las 205 salas de relleno comparten descripción por tipo: hay muchas
+  "Calzada" idénticas. A medida que el pueblo importe, conviene irlas
+  ascendiendo a salas con nombre propio; el andamiaje ya está.
