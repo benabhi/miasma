@@ -78,6 +78,11 @@ class CharacterCmdSet(default_cmds.CharacterCmdSet):
                 jugador.CmdMapa,
             ),
         )
+        # La red de abajo para las direcciones sin salida. Van al final:
+        # una salida real siempre les gana, porque su cmdset tiene más
+        # prioridad.
+        for cmd in jugador.COMANDOS_SIN_SALIDA:
+            self.add(cmd)
 
 
 class AccountCmdSet(default_cmds.AccountCmdSet):

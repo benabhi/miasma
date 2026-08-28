@@ -68,6 +68,33 @@ sola en el primer arranque, cuando detecta que no existe la Cuenta #1.
 
 ---
 
+## El cliente
+
+El cliente oficial es [TinTin++](https://tintin.mudhalla.net/). El repo trae
+`miasma.tin`, que deja la pantalla partida con el mapa arriba, el automapper
+andando y el teclado numérico moviendo al personaje:
+
+```bash
+tt++ miasma.tin
+```
+
+| Tecla | Va a |
+|---|---|
+| `8` `2` `4` `6` | norte, sur, oeste, este |
+| `7` `9` `1` `3` | las diagonales |
+| `5` | mirar |
+| `0` | mapa |
+
+El numérico manda esas secuencias con **Bloq Num apagado**. Con Bloq Num
+encendido escribe dígitos, y para ese caso están los alias `8`, `2`, `4`… que
+hacen lo mismo apretando Enter.
+
+Otros atajos: `mapaguardar` / `mapacargar` para conservar lo explorado,
+`ira <lugar>` para que camine solo hasta un lugar ya visitado, `mapadeshacer`
+si el mapa se desincroniza, `clear` para limpiar la pantalla.
+
+---
+
 ## El día a día
 
 ```bash

@@ -98,6 +98,13 @@ CONSTRUCCIONES = frozenset(
     )
 )
 
+# Lo construido que se camina, pero no de una unidad a la otra. Cada celda que
+# da a la vereda es una vivienda o un negocio distinto: se entra desde la calle
+# y no desde la casa de al lado. Las celdas que no dan a la calle —el fondo de
+# una manzana profunda— se anexan a la unidad frentista más cercana, que es lo
+# que son: el fondo de esa casa.
+INDEPENDIENTES = frozenset(("casa", "edificio", "comercio"))
+
 ICONO_DESCONOCIDO = "?"
 ICONO_JUGADOR = "@"
 ICONO_VACIO = " "

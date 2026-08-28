@@ -113,6 +113,58 @@ def _une_diagonal(transitables, a, b):
     return "diagonal" in (transitables.get(a), transitables.get(b))
 
 
+def _viviendas(transitables):
+    """
+    Reparte las celdas de vivienda en unidades independientes.
+
+    Cada celda que da a la calle es una vivienda o un negocio distinto. Las que
+    no dan a la calle —el fondo de una manzana profunda— se anexan a la unidad
+    frentista más cercana: son el fondo de esa casa, no una casa aparte.
+
+    Returns:
+        dict: `{pos: pos de la celda frentista}`, para las celdas de vivienda.
+
+    """
+    unidades = {}
+    cola = deque()
+    for pos in sorted(transitables):
+        if transitables[pos] not in iconos.INDEPENDIENTES:
+            continue
+        da_a_la_calle = any(
+            transitables.get(vecina) not in (None, *iconos.INDEPENDIENTES)
+            for _dir, vecina in _vecinas_de(pos)
+        )
+        if da_a_la_calle:
+            unidades[pos] = pos
+            cola.append(pos)
+    while cola:
+        pos = cola.popleft()
+        for _dir, vecina in _vecinas_de(pos):
+            if (
+                transitables.get(vecina) in iconos.INDEPENDIENTES
+                and vecina not in unidades
+            ):
+                unidades[vecina] = unidades[pos]
+                cola.append(vecina)
+    return unidades
+
+
+def _se_comunican(caminables, unidades, puertas, a, b):
+    """
+    True si dos celdas contiguas se comunican caminando.
+
+    Lo construido no se atraviesa de una unidad a la otra: de una casa se sale
+    a la vereda, no al living del vecino. Dos celdas construidas solo se
+    comunican si son la misma vivienda; con la calle, siempre.
+
+    """
+    construida_a = a in puertas or caminables.get(a) in iconos.INDEPENDIENTES
+    construida_b = b in puertas or caminables.get(b) in iconos.INDEPENDIENTES
+    if construida_a and construida_b:
+        return a in unidades and unidades.get(a) == unidades.get(b)
+    return True
+
+
 def _grupos_construidos(celdas):
     """
     Agrupa en edificios las celdas construidas contiguas del mismo tipo.
@@ -560,16 +612,17 @@ def construir(caller=None, borrar_ejemplos=True):
     #        Se conecta lo transitable y también el umbral de cada edificio: al
     #        umbral se llega caminando desde la vereda, como a cualquier otra
     #        celda. Lo que queda afuera es el cuerpo del edificio, que no es
-    #        sala; y dos umbrales nunca se conectan entre sí, porque si no se
-    #        pasaría de un edificio al de al lado sin salir a la calle.
+    #        sala. Y lo construido no se comunica entre sí: de una casa se sale
+    #        a la vereda, no al living del vecino.
     caminables = dict(transitables)
     caminables.update({pos: tipo for pos, (tipo, _c, _n) in puertas.items()})
+    unidades = _viviendas(transitables)
     automaticas = 0
     for pos in caminables:
         for direccion, vecina in _vecinas_de(pos):
             if (
                 vecina in caminables
-                and not (pos in puertas and vecina in puertas)
+                and _se_comunican(caminables, unidades, puertas, pos, vecina)
                 and crear_salida(por_celda[pos], direccion, por_celda[vecina])
             ):
                 automaticas += 1

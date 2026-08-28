@@ -535,3 +535,79 @@ class CmdMapa(Command):
         if referencia:
             salida += ["", "|wReferencia:|n"] + referencia
         self.msg("\n".join(salida))
+
+
+# --------------------------------------------------------------------------
+# Direcciones sin salida
+#
+# En Evennia las direcciones no son comandos: son las salidas de la sala. Si la
+# sala no tiene salida al este, escribir `este` no encuentra ningún comando y el
+# juego contesta "El comando 'este' no existe. ¿Quisiste decir 'oeste'?", que
+# manda al jugador a buscar un error de tipeo donde solo hay una pared.
+#
+# Estos comandos son la red de abajo: contestan lo que corresponde cuando no hay
+# salida. Nunca le ganan a una salida real, porque el cmdset de salidas tiene
+# prioridad 101 contra 0 del cmdset del personaje (`objects.py`, DefaultExit).
+# --------------------------------------------------------------------------
+
+SIN_SALIDA = {
+    "norte": "hacia el norte",
+    "sur": "hacia el sur",
+    "este": "hacia el este",
+    "oeste": "hacia el oeste",
+    "noreste": "hacia el noreste",
+    "noroeste": "hacia el noroeste",
+    "sureste": "hacia el sureste",
+    "suroeste": "hacia el suroeste",
+    "arriba": "hacia arriba",
+    "abajo": "hacia abajo",
+    "dentro": "hacia adentro",
+    "fuera": "hacia afuera",
+}
+
+
+class _SinSalida(Command):
+    """
+    ir en una dirección
+
+    Uso:
+      <dirección>
+
+    Las direcciones se caminan escribiéndolas: |wnorte|n, |wsur|n, |weste|n,
+    |woeste|n, y las diagonales |wnoreste|n, |wnoroeste|n, |wsureste|n y
+    |wsuroeste|n. También |warriba|n y |wabajo|n donde haya por dónde.
+
+    Cada sala muestra sus salidas al pie.
+    """
+
+    locks = "cmd:all()"
+    help_category = "general"
+    arg_regex = r"$"
+    rumbo = ""
+
+    def func(self):
+        self.msg(f"No hay salida {self.rumbo}.")
+
+
+def _comandos_sin_salida():
+    """Arma un comando por dirección, cada uno con los alias de la suya."""
+    from world.mapa.nebrida import DIRECCIONES
+
+    comandos = []
+    for direccion, rumbo in SIN_SALIDA.items():
+        comandos.append(
+            type(
+                f"CmdSinSalida{direccion.capitalize()}",
+                (_SinSalida,),
+                {
+                    "key": direccion,
+                    "aliases": list(DIRECCIONES.get(direccion, ())),
+                    "rumbo": rumbo,
+                    "__doc__": _SinSalida.__doc__,
+                },
+            )
+        )
+    return comandos
+
+
+COMANDOS_SIN_SALIDA = _comandos_sin_salida()

@@ -1,0 +1,239 @@
+#nop ############################################################
+#nop
+#nop   miasma.tin — configuración de TinTin++ para Miasma
+#nop
+#nop   Uso:  tt++ miasma.tin
+#nop
+#nop   TinTin++ es el cliente oficial del juego. Este archivo deja la
+#nop   pantalla partida con el mapa arriba, el automapper andando y el
+#nop   teclado numérico moviendo al personaje.
+#nop
+#nop   Los comentarios van con #nop porque TinTin++ no tiene otra forma
+#nop   de comentar: todo lo que no es un comando se manda al servidor.
+#nop
+#nop ############################################################
+
+
+#nop ============================================================
+#nop  A dónde conectarse
+#nop ============================================================
+
+#variable {miasma[servidor]} {localhost}
+#variable {miasma[puerto]}   {4000}
+
+
+#nop ============================================================
+#nop  Terminal
+#nop
+#nop  El juego manda acentos, eñes y dibujo de cajas: sin UTF-8 el
+#nop  mapa se descuadra y las descripciones salen con basura.
+#nop
+#nop  SPEEDWALK queda apagado a propósito. Con speedwalk encendido,
+#nop  escribir "no" (noroeste) se interpreta como "norte, oeste" y
+#nop  el personaje sale caminando a otro lado.
+#nop ============================================================
+
+#config {CHARSET}      {UTF-8}
+#config {SPEEDWALK}    {OFF}
+#config {HISTORY SIZE} {1000}
+#config {TAB WIDTH}    {4}
+#config {WORDWRAP}     {ON}
+
+
+#nop ============================================================
+#nop  La pantalla
+#nop
+#nop  #split {filas de arriba} {filas de abajo}
+#nop
+#nop  El primero es el tamaño de la franja de arriba, que es donde el
+#nop  mapa se dibuja. Con los números al revés el mapa termina abajo.
+#nop
+#nop  Arriba el mapa, abajo la línea de entrada, y el juego corre en
+#nop  el medio. Si tu terminal es corta, bajá el 16: con 24 filas de
+#nop  alto conviene 10, o el texto no entra.
+#nop ============================================================
+
+#split 16 2
+
+
+#nop ============================================================
+#nop  Conectar
+#nop
+#nop  Va acá arriba y no al final a propósito: en TinTin++ casi todo
+#nop  lo que no sea #config, #alias o #macro necesita una sesión
+#nop  abierta, y puesto al final falla con "NO SESSION ACTIVE" sin
+#nop  que se note. Los alias y macros de más abajo se cargan igual
+#nop  mientras la conexión se establece.
+#nop ============================================================
+
+#session miasma {$miasma[servidor]} {$miasma[puerto]}
+
+
+#nop ============================================================
+#nop  El mapa
+#nop
+#nop  Este es el mapa de TinTin++, que no es el minimapa del juego.
+#nop  El del juego muestra lo que tenés alrededor ahora; este se va
+#nop  dibujando solo a medida que caminás y se acuerda de toda la
+#nop  ciudad, así que sirve para volver a un lugar donde estuviste.
+#nop
+#nop  vtmap lo dibuja en la parte de arriba de la pantalla y lo
+#nop  centra en vos en cada paso.
+#nop ============================================================
+
+#nop  El #map create va acá abajo, después del #session: los comandos
+#nop  de mapa necesitan una conexión abierta. Colgarlo de un evento
+#nop  {SESSION CONNECTED} no sirve, porque el evento se registraría
+#nop  después de que la sesión ya se abrió y no dispararía nunca.
+
+#map create 65536
+#map flag vtmap on
+#map flag asciigraphics off
+
+#nop  Nébrida todavía no viene predibujada: el mapa se arma solo a
+#nop  medida que caminás. Con `mapaguardar` queda en miasma.map y con
+#nop  `mapacargar` vuelve, así que se explora una vez y listo.
+#nop
+#nop  Para que venga hecha de fábrica habría que generar el .map desde
+#nop  el mundo del juego, y para eso hace falta saber el formato que
+#nop  escribe TinTin++. Se saca en dos minutos: conectate, hacé
+#nop
+#nop      #map create 100
+#nop      #map name {Prueba}
+#nop      #map move n
+#nop      #map write /tmp/prueba.map
+#nop
+#nop  y pasame el contenido de ese archivo.
+
+#nop --- guardar y recuperar lo explorado -----------------------
+
+#alias {mapaguardar} {#map write miasma.map;#echo {<128>mapa guardado en miasma.map<088>}}
+#alias {mapacargar}  {#map read  miasma.map;#echo {<128>mapa cargado<088>}}
+
+#nop  Si el mapa se desincroniza —pasa cuando un movimiento falla y
+#nop  TinTin cree que igual te moviste— con esto se vuelve un paso
+#nop  atrás.
+#alias {mapadeshacer} {#map undo}
+
+#nop  Caminar solo hasta un lugar ya visitado: `ira Plaza Mayor`
+#alias {ira} {#map run {%1}}
+
+
+
+
+#nop ============================================================
+#nop  Movimiento
+#nop
+#nop  Cada dirección hace dos cosas: le avisa al mapa hacia dónde
+#nop  vamos y manda el comando al juego. El `#send` evita que el
+#nop  alias se llame a sí mismo.
+#nop
+#nop  Las direcciones del juego están en español; las del mapa de
+#nop  TinTin++ son las inglesas de una letra (n, s, e, w, ne...).
+#nop  Por eso cada línea traduce.
+#nop ============================================================
+
+#alias {norte}     {#map move n;#send {norte}}
+#alias {sur}       {#map move s;#send {sur}}
+#alias {este}      {#map move e;#send {este}}
+#alias {oeste}     {#map move w;#send {oeste}}
+#alias {noreste}   {#map move ne;#send {noreste}}
+#alias {noroeste}  {#map move nw;#send {noroeste}}
+#alias {sureste}   {#map move se;#send {sureste}}
+#alias {suroeste}  {#map move sw;#send {suroeste}}
+#alias {arriba}    {#map move u;#send {arriba}}
+#alias {abajo}     {#map move d;#send {abajo}}
+
+#nop --- las abreviaturas del juego ----------------------------
+
+#alias {n}  {norte}
+#alias {s}  {sur}
+#alias {e}  {este}
+#alias {o}  {oeste}
+#alias {ne} {noreste}
+#alias {no} {noroeste}
+#alias {se} {sureste}
+#alias {so} {suroeste}
+#alias {ar} {arriba}
+#alias {ab} {abajo}
+
+
+#nop ============================================================
+#nop  El teclado numérico
+#nop
+#nop      7 8 9      noroeste  norte  noreste
+#nop      4 5 6         oeste  mirar  este
+#nop      1 2 3      suroeste  sur    sureste
+#nop      0 .          mapa    entrar
+#nop
+#nop  |yEsto necesita el numérico en modo aplicación|n, que es como
+#nop  queda con |wBloq Num apagado|n en la mayoría de las terminales.
+#nop  Con Bloq Num encendido el numérico escribe dígitos en vez de
+#nop  mandar estas secuencias; para ese caso están los alias de
+#nop  números de más abajo.
+#nop
+#nop  Si tu terminal manda otras secuencias, se averiguan corriendo
+#nop  `cat -v` en una consola y apretando las teclas: lo que imprima
+#nop  (por ejemplo ^[Ox) es lo que va entre llaves, cambiando el ^[
+#nop  por \e.
+#nop ============================================================
+
+#macro {\eOw} {noroeste}
+#macro {\eOx} {norte}
+#macro {\eOy} {noreste}
+#macro {\eOt} {oeste}
+#macro {\eOu} {mirar}
+#macro {\eOv} {este}
+#macro {\eOq} {suroeste}
+#macro {\eOr} {sur}
+#macro {\eOs} {sureste}
+#macro {\eOp} {mapa}
+#macro {\eOn} {entrar}
+
+#nop --- con Bloq Num encendido: los dígitos, y Enter -----------
+
+#alias {7} {noroeste}
+#alias {8} {norte}
+#alias {9} {noreste}
+#alias {4} {oeste}
+#alias {5} {mirar}
+#alias {6} {este}
+#alias {1} {suroeste}
+#alias {2} {sur}
+#alias {3} {sureste}
+#alias {0} {mapa}
+
+#nop --- las flechas, por si preferís ---------------------------
+
+#macro {\e[A} {norte}
+#macro {\e[B} {sur}
+#macro {\e[C} {este}
+#macro {\e[D} {oeste}
+
+
+#nop ============================================================
+#nop  Atajos del juego
+#nop
+#nop  Acá se van agregando los que hagan falta a medida que el
+#nop  juego crezca. Los de ahora son los de andar por la ciudad.
+#nop ============================================================
+
+#alias {clear} {#system clear}
+
+#alias {i}  {inventario}
+#alias {m}  {mirar}
+#alias {mm} {mapa}
+#alias {ma} {mapa 20}
+
+#nop  Registro de la sesión, útil para revisar después qué pasó.
+#alias {registro}    {#log append miasma.log;#echo {<128>registrando en miasma.log<088>}}
+#alias {registrofin} {#log off;#echo {<128>registro cerrado<088>}}
+
+#nop ============================================================
+#nop  Bienvenida
+#nop ============================================================
+
+#echo {<118>  M I A S M A|n <088>}
+#echo {<088>  Nébrida. El aire está enfermo.<088>}
+#echo {<128>  numérico: 8 norte · 2 sur · 4 oeste · 6 este · 5 mirar · 0 mapa<088>}
+#echo {<128>  mapaguardar / mapacargar / mapadeshacer · ira <lugar><088>}
