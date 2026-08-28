@@ -31,7 +31,7 @@
 #nop  Si preferís arrancarlo desde otro lado, poné acá la ruta completa
 #nop  (por ejemplo /home/tu-usuario/mud/miasma/nebrida.map).
 
-#variable {miasma[mapa]} {miasma/nebrida.map}
+#variable {miasma[mapa]} {./miasma/nebrida.map}
 
 
 #nop ============================================================
@@ -242,13 +242,6 @@
 #alias {2} {sur}
 #alias {3} {sureste}
 #alias {0} {mapa}
-
-#nop --- las flechas, por si preferís ---------------------------
-
-#macro {\e[A} {norte}
-#macro {\e[B} {sur}
-#macro {\e[C} {este}
-#macro {\e[D} {oeste}
 
 
 #nop ============================================================
