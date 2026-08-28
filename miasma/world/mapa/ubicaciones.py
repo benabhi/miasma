@@ -332,36 +332,50 @@ RELLENO = {
         ("Playón", "Cemento marcado con líneas amarillas descoloridas y unos "
          "pocos autos estacionados, prolijos, cubiertos de ceniza."),
     ],
+    # Casas, departamentos y locales se caminan celda por celda: cada una es
+    # una vivienda o un negocio distinto, y estar ahí es estar adentro. Las
+    # descripciones van desde adentro, no desde la vereda.
     "casa": [
-        ("Casa", "Una vivienda de dos plantas con el porche hundido y las "
-         "cortinas corridas. La puerta del frente está abierta lo justo."),
-        ("Casa", "Un chalet con jardín al frente, cerco vivo y un triciclo "
-         "volcado en el camino de lajas."),
-        ("Casa", "Casa chorizo de patio largo, con las macetas alineadas "
-         "contra la pared y la ropa todavía tendida."),
-        ("Casa", "Un PH de dos plantas con la escalera por afuera y cuatro "
-         "medidores de luz en la entrada. Tres giran."),
+        ("Casa", "El living de una vivienda de dos plantas: sillones con "
+         "funda, una tele apagada y la escalera al fondo. Las cortinas están "
+         "corridas y la luz que entra es la del pasillo."),
+        ("Casa", "La cocina comedor de un chalet, con la mesa puesta para "
+         "cuatro y las sillas corridas hacia atrás, como si se hubieran "
+         "levantado todos al mismo tiempo."),
+        ("Casa", "El patio largo de una casa chorizo, con las macetas "
+         "alineadas contra la pared y la ropa todavía tendida, tiesa de "
+         "ceniza."),
+        ("Casa", "Un dormitorio con la cama sin hacer de un solo lado, la "
+         "ventana entornada y un vaso de agua en la mesa de luz, lleno."),
+        ("Casa", "El garaje de una vivienda: un auto bajo una funda de lona, "
+         "estanterías de herramientas y cajas de cartón apiladas hasta el "
+         "techo."),
     ],
     "edificio": [
-        ("Edificio de departamentos", "Ocho pisos de ladrillo con balcones "
-         "franceses y macetas muertas. El portero eléctrico tiene veinte "
-         "timbres y ninguno anda."),
-        ("Edificio de departamentos", "Un bloque de vivienda social, cuatro "
-         "cuerpos alrededor de un patio interno con tendederos."),
-        ("Edificio de oficinas", "Vidrio espejado del piso al techo, con el "
-         "hall vacío y los molinetes de acceso destrabados."),
+        ("Departamento", "Un dos ambientes con balcón francés y macetas "
+         "muertas. Desde la ventana no se ve la calle: se ve la niebla a la "
+         "altura del cuarto piso."),
+        ("Palier", "El descanso de un piso, con cuatro puertas numeradas, el "
+         "ascensor con la reja abierta y una alfombra que no tapa nada."),
+        ("Departamento", "Monoambiente de vivienda social: cocina contra la "
+         "pared, cama contra la ventana y un tendedero plegable en el medio "
+         "del paso."),
+        ("Oficina", "Escritorios en isla bajo tubos fluorescentes, monitores "
+         "encendidos en un salvapantallas y un teléfono descolgado."),
     ],
     "comercio": [
-        ("Local a la calle", "Un negocio chico con la persiana a medio bajar "
-         "y la vidriera empañada por dentro."),
         ("Almacén", "Góndolas hasta el techo y una heladera de bebidas que "
          "zumba. La caja registradora está abierta y llena."),
         ("Bar", "Doce mesas, barra de estaño y taburetes altos. En una mesa "
          "quedaron dos vasos servidos y sin tocar."),
-        ("Farmacia", "Mostrador de vidrio, cajones numerados y la cruz verde "
-         "de la puerta parpadeando."),
+        ("Farmacia", "Mostrador de vidrio, cajones numerados y una cruz verde "
+         "que parpadea contra la vidriera."),
         ("Ferretería", "Todo colgado de ganchos y ordenado por tamaño, del "
          "clavo más chico a la maza."),
+        ("Peluquería", "Dos sillones giratorios frente a un espejo largo, con "
+         "los secadores colgados y el piso barrido."),
+        ("Panadería", "Vitrinas vacías, la balanza en cero y el horno "
+         "todavía tibio."),
     ],
     "mercado": [
         ("Mercado Central — puestos", "Puestos de chapa y madera bajo la nave "
@@ -480,24 +494,6 @@ RELLENO_EXTERIOR = frozenset(
 # --------------------------------------------------------------------------
 
 ENTRADAS = {
-    "edificio": (
-        "Portal de un edificio",
-        "Un zaguán de baldosa calcárea con la puerta de calle trabada abierta, "
-        "el tablero de timbres a un lado y la escalera arrancando al fondo.\n\n"
-        "La escalera sube a oscuras. Todavía no hay por dónde seguir.",
-    ),
-    "casa": (
-        "Puerta de una casa",
-        "El porche de una vivienda: tres escalones, un felpudo y la puerta "
-        "entornada.\n\n"
-        "Adentro está oscuro y no se distingue nada.",
-    ),
-    "comercio": (
-        "Puerta de un local",
-        "El acceso de un negocio a la calle, con la persiana a medio bajar y el "
-        "olor a encierro que sale de adentro.\n\n"
-        "Habría que agacharse para pasar, y del otro lado no se ve.",
-    ),
     "mercado": (
         "Portón del mercado",
         "Uno de los portones de hierro del mercado, con las hojas plegadas "

@@ -72,16 +72,18 @@ ICONOS = {
 # Por acá no se camina nunca: se dibuja, pero no es sala.
 INTRANSITABLES = frozenset(("agua", "arbol", "muro"))
 
-# Lo construido. Una manzana de departamentos no es un terreno por el que se
-# pasa: es un edificio, y para entrar hay que usar la puerta. De cada grupo de
-# celdas contiguas del mismo tipo, el constructor hace sala **solo la celda de
-# la puerta**, y la conecta con la calle mediante `entrar` / `salir`. El resto
-# del edificio se dibuja pero es macizo.
+# Lo construido que no se atraviesa. De cada grupo de celdas contiguas del mismo
+# tipo, el constructor hace sala **solo la celda de la puerta**, marcada con `+`
+# en el mapa; el resto se dibuja pero es macizo.
+#
+# Acá están los edificios singulares: los que son un volumen único con una
+# entrada, y en los que pasar de una punta a la otra por adentro tiene que
+# significar algo. La trama común de la ciudad —casas, departamentos, locales a
+# la calle— queda afuera a propósito: son muchos y chicos, cada celda es una
+# vivienda o un negocio distinto, y se entra a cada uno desde la vereda sin
+# ceremonia.
 CONSTRUCCIONES = frozenset(
     (
-        "edificio",
-        "casa",
-        "comercio",
         "mercado",
         "industria",
         "iglesia",
