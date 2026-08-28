@@ -106,7 +106,31 @@
 #nop  así que no hay que caminar la ciudad entera para tenerla.
 
 #map create 4096
-#map read {$miasma[mapa]}
+
+#nop  Antes de leerlo, chequeamos que esté. Si no, el mensaje de
+#nop  TinTin++ es un escueto NOT FOUND que no dice el porqué, y el
+#nop  porqué casi siempre es el mismo: arrancaste el cliente desde
+#nop  otro directorio.
+
+#script {miasma[existe]} {ls -1 $miasma[mapa] 2>/dev/null}
+
+#if {"$miasma[existe]" == ""}
+{
+    #echo {<118>};
+    #echo {<118>  No encontré el mapa de la ciudad en esta ruta:<088>};
+    #echo {<138>      $miasma[mapa]<088>};
+    #echo {<128>  Es relativa al directorio desde el que arrancaste<088>};
+    #echo {<128>  TinTin++, no a la ubicación de miasma.tin. Parate en<088>};
+    #echo {<128>  la raíz del repo y volvé a entrar:<088>};
+    #echo {<138>      cd /ruta/al/repo<088>};
+    #echo {<138>      tt++ miasma.tin<088>};
+    #echo {<128>  O escribí la ruta completa en la variable miasma[mapa],<088>};
+    #echo {<128>  arriba de todo en miasma.tin.<088>};
+    #echo {<118>}
+}
+{
+    #map read {$miasma[mapa]}
+}
 
 #nop  La bandera 'static' es lo que hace que el mapa no se dibuje solo. Sin esta
 #nop  bandera, cada `#map move` inventa una sala nueva hacia donde
