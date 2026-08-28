@@ -1,10 +1,15 @@
-# El mundo: Silent Hill
+# El mundo: Nébrida
 
-Escenario de pruebas de Miasma: una reconstrucción de la ciudad de *Silent Hill*
-(Konami, 1999). No es contenido definitivo — es un mundo conocido y de tamaño
-razonable sobre el que probar cada sistema nuevo a medida que se incorpora.
+Nébrida es una ciudad mediana de provincia sobre un lago, partida por un río,
+con su centro cívico, sus barrios, su puerto y su zona de galpones. Es el
+escenario sobre el que se prueba cada sistema nuevo a medida que se incorpora.
 
-**309 salas, 1091 salidas, 5 planos.** El juego arranca en el Café 5to2.
+**2452 salas, 9326 salidas, 3 planos.** El juego arranca en la Plaza Mayor.
+
+El mapa es de 80×40 celdas. La retícula tiene separaciones desparejas —manzanas
+de dos, tres y cuatro celdas mezcladas— más una avenida diagonal que corta el
+damero: una ciudad con todas las manzanas iguales se lee como papel
+cuadriculado.
 
 ---
 
@@ -16,7 +21,7 @@ idempotente: borra lo que dejó la corrida anterior y levanta todo de cero.
 Desde el juego, como superusuario:
 
 ```
-batchcode batch.silent_hill
+batchcode batch.nebrida
 ```
 
 Desde la línea de comandos:
@@ -92,18 +97,18 @@ escrita a mano siempre le gana a la automática.
 
 ### Salas con nombre y salas de relleno
 
-- Las salas escritas en `silent_hill.py` reclaman su celda en `NOMBRADAS`, y
-  usan su nombre y su descripción propios. Son 96.
+- Las salas escritas en `nebrida.py` reclaman su celda en `NOMBRADAS`, y usan
+  su nombre y su descripción propios. Son 27: los lugares singulares.
 - Las celdas que no reclamó nadie las llena el constructor con salas genéricas
   según el tipo, desde la tabla `RELLENO` ("Calzada", "Baldío", "Casa
-  abandonada"…). Son 205. Existen para que la grilla quede densa sin tener que
-  escribir doscientas descripciones; el detalle está en las salas con nombre.
-- `ANCLADAS` son los interiores de una sola sala. No ocupan celda: dibujar un
-  mapa de 1×1 para el interior de un bar no le sirve a nadie, así que cuando el
-  jugador está adentro se dibuja la calle de la que entró, con la marca sobre
-  esa celda. Son 8 —la torre del puente, la habitación y el garage del motel,
-  la enfermería y el aula de la escuela— y el constructor resuelve el ancla
-  solo, mirando de dónde se entra.
+  abandonada"…). Son 2425. Cada tipo tiene varias variantes y el constructor
+  elige una según la coordenada, así que dos manzanas seguidas no dicen lo
+  mismo. **Los tramos de calle se llaman como la calle**: "Calle Rovira",
+  "Calle Undiano y Calle Bergara". Una ciudad no necesita dos mil descripciones
+  distintas; necesita que cada esquina sepa cómo se llama.
+- `ANCLADAS` es para interiores de una sola sala, que no ocupan celda: cuando
+  el jugador está adentro se dibuja la calle de la que entró. Hoy está vacío:
+  todo lo visitable ocupa su lugar en algún plano.
 
 ### El agua no es una sala
 
@@ -123,17 +128,22 @@ y las cosas. Se redibuja solo en cada movimiento, porque lo arma
 `Room.return_appearance()` (`typeclasses/rooms.py`).
 
 ```
-┌─────────────┐   Café 5to2
-│T T T T . ~ ~│
-│░ ▒ ░ ░ ▓ ~ ~│   Un bar de esquina de doce mesas, con piso de damero y bancos
-│n ░ $ @ ▓ ~ ~│   de cuerina roja rajada. La vidriera que da a Finney está
-│n ░ . . ▓ ~ ~│   reventada hacia adentro y el vidrio cruje bajo cualquier
-│░ ▒ ░ ░ ▓ ~ ~│   paso.
-│n ░ $ $ ▓ ~ ~│
-│. ░ % % ▓ ~ ~│   Sobre el mostrador, junto a una taza con café frío y una
-└─────────────┘   raya de carmín en el borde, hay una radio portátil...
-Salidas: fuera, norte, sur y oeste
+▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒   Plaza Mayor
+▒≡ ≡ ≡ / ┴ ─ ┼▒
+▒~ # / , , , │▒   La niebla lo come todo a diez metros. Cae ceniza, mansa,
+▒n / ┤ , , , │▒   como nieve sucia.
+▒/ # │ @ , , │▒
+▒╩ ═ ╬ ═ ═ ═ ╬▒   El centro de Nébrida, y se nota: cuatro hileras de plátanos
+▒n # │ A A A │▒   podados en cubo, bancos de hierro fundido y una fuente
+▒n # │ A A A │▒   circular en el medio, seca...
+▒▒▒▒▒▒▒▒▒▒▒▒▒▒▒
+Salidas: norte, sur, este y oeste
 ```
+
+Cada tipo tiene su color: azul el agua, verde la vegetación, gris la trama,
+rojo las emergencias, y el jugador en negro sobre amarillo, que es lo único del
+mapa con fondo. La paleta está agrupada en familias para que el ojo entienda de
+qué se trata antes de identificar el carácter.
 
 El radio es de 3 celdas: con la calle cada tres, entra una manzana entera con
 sus calles alrededor, que es lo mínimo para orientarse en una retícula.
@@ -186,21 +196,20 @@ y descuadran la grilla entera.
 | Archivo | Qué es |
 |---|---|
 | `world/mapa/ubicaciones.py` | **La grilla.** El dibujo de cada plano, qué sala ocupa cada celda y con qué rellenar las que sobran. |
-| `world/mapa/silent_hill.py` | **Los textos.** Nombres, descripciones y las conexiones que no son de grilla. |
+| `world/mapa/nebrida.py` | **Los textos.** Nombres, descripciones y las conexiones que no son de grilla. |
 | `world/mapa/iconos.py` | Tipos de sala a caracteres, y los muros. |
 | `world/mapa/render.py` | Dibuja el mapa recorriendo las salidas reales. |
 | `world/mapa/constructor.py` | Valida, borra el mundo anterior, construye el nuevo, escribe los dbrefs. |
-| `world/batch/silent_hill.py` | Punto de entrada del batchprocessor. Tres líneas. |
+| `world/batch/nebrida.py` | Punto de entrada del batchprocessor. Tres líneas. |
 
 ### Agregar una sala con nombre propio
 
 1. En `ubicaciones.py`, poner el carácter de su tipo en la celda del dibujo.
-2. En `silent_hill.py`, la entrada en `SALAS`:
+2. En `nebrida.py`, la entrada en `SALAS`:
 
 ```python
-SALAS["int_farmacia"] = {
-    "nombre": "Farmacia de Bloch St.",
-    "distrito": "old",
+SALAS["mi_lugar"] = {
+    "nombre": "Mi lugar",
     "exterior": False,        # True antepone la niebla a la descripción
     "desc": "...",
 }
@@ -209,7 +218,7 @@ SALAS["int_farmacia"] = {
 3. En `ubicaciones.py`, reclamar la celda:
 
 ```python
-NOMBRADAS["int_farmacia"] = ("pueblo", 2, 6, 0)
+NOMBRADAS["mi_lugar"] = ("nebrida", 42, 22, 0)
 ```
 
 Si es un interior de una sola sala, en vez del paso 3 va en `ANCLADAS` con su
@@ -232,7 +241,7 @@ si encuentra:
 
 ### Qué se borra y qué no
 
-El constructor etiqueta todo lo que crea con `silent_hill` (categoría `mapa`) y
+El constructor etiqueta todo lo que crea con `nebrida` (categoría `mapa`) y
 solo borra objetos con esa etiqueta, más las salas de ejemplo de Evennia
 (Limbo). Lo que hayas dejado tirado dentro de una sala se pierde con la sala,
 pero **los personajes y los objetos que estén ahí se mudan al punto de partida
@@ -248,46 +257,66 @@ de calles, comercios y salas interiores son los del juego. La topología es una
 simplificación navegable: las calles se representan por sus cruces, no metro a
 metro.
 
-El pueblo entero es **un solo plano continuo**: Old Silent Hill al noroeste, el
-canal en el medio con el puente levadizo, el centro al este y el área turística
-bajando hacia el lago Toluca. Hay calle cada tres celdas en los dos ejes, y
-entre ellas las manzanas de 2×2.
+La ciudad entera es **un solo plano continuo**. Así se ve completa, sin las
+separaciones entre celdas que el juego dibuja para marcar por dónde se pasa:
 
 ```
-T T T T T T T T T . ~ ~ T T T T T T T T
-▒ ░ ░ ▒ ░ ░ ▒ ░ ░ ▓ ~ ~ ▒ ░ ░ ▒ ░ ░ ▓ T
-░ n n ░ n n ░ $ $ ▓ ~ ~ ░ P P ░ $ $ ▓ T
-░ n n ░ n n ░ . . ▓ ~ ~ ░ P P ░ $ # ▓ T
-▒ ░ ░ ▒ ░ ░ ▒ ░ ░ ▓ ~ ~ ▒ ░ ░ ▒ ░ ░ ▓ T
-░ n n ░ n n ░ $ $ ▓ ~ ~ ░ $ $ ░ H H ▓ T
-░ n : ░ n . ░ % % ▓ ~ ~ ░ $ . ░ H H ▓ T
-▒ ░ ░ ▒ ░ ░ ▒ ░ ░ ▓ ~ ~ ▒ ░ ░ ▒ ░ ░ ▓ T
-░ $ $ ░ E E ░ + % ▓ ~ ~ ░ # # ░ # # ▓ T
-░ $ . ░ E E ░ + % ▓ ~ ~ ░ # # ░ # # ▓ T
-▒ ░ ░ ▒ ░ ░ ▒ ░ ░ ▓ = = ▒ ░ ░ v ░ ░ ▓ T
-~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ░ # # ░ M M ▓ T
-~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ░ # # ░ M M ▓ T
-~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ▒ ░ ░ ▒ ░ ░ ▓ *
-~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ░ n n ░ $ $ ▓ T
-~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ░ n n ░ $ $ ▓ T
-~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ = ▒ ░ ░ ▒ ░ ░ ▓ T
-~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ░ $ . ░ $ M ▓ T
-~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ░ $ . ░ M M ▓ T
-~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ! ▒ ░ ░ ▒ ░ ░ ▓ T
-~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ░ . . ░ . . ▓ T
-~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ░ . . ░ . . ▓ T
-~ ~ ~ ~ ~ ~ ~ ~ ~ ~ ~ & ▒ ░ ░ ▒ ░ ░ ▓ T
+TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT~~~~~TTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+TTTTnnTTTTTTTTTTTTTT│nTTTTTTTTTTTTTTn│TTTTTTT~~~~~TTnnTTTTTTTTTTTTTT%%TTTTTTTTTT
+TTn│nnn│TTTTTnnTTTnn│nnnTTTTT║nTTTnnn│nnTTTT~~~~~T│nnn│nTTTTT##TTT%│%%%│TTTTTTTT
+nnn│nnn│nTTTnnnn│nnn│nnn│TTTn║nnn│nnn│nnnTTT~~~~~n│nnn/nnTTT###│%%%│%%%│%TTTTTTT
+───┼───┼───┬────┼───┼───┼────╬───┼───┼───┬┐~~~~~┌─┼─┬/┼───╦────┼───┼───┤TTTTTTTT
+nnn│nnn│nnn│$$$$│XXX│XX.│nnnn║nnn│$$$│nnn├≡≡≡≡≡≡≡n│n/n│nnn║EEE%│%%%│###│$$TTTTTT
+nnn│nnn│nnn│$$$$│XXX│XX.│PPnn║nnn│BB$│nnn│~~~~~nnn├/nn│nnn║EEE%│%%%│###│$$TTTTTT
+nnn│nnn│nnn│$$$$│XXX│XX.│PPnn║nnn│BB$│nnn│~~~~~nnn/nnn│nnn║EEE%│%%%│###│$TTTTTTT
+───┼───┼───┼────┼───┼───┼────╬───┼───┼───~~~~~──┬/┼───┼───╬────┼───┼───┼──TTTTTT
+...│nnn│$$$│....│nnn│$$$│....║$$$│...│nnn~~~~~HH/.│nnn│$$$║....│%%%│%%%│TTTTTTTT
+...│nnn│$$$│++..│,,n│$$$│....║$$$│...│nn~~~~~│H/H.│nnn│$$$║....│%%%│%%%│%%TTTTTT
+...│nnn│$$$│++..│,,n│$$$│....║$$$│...│n~~~~~$├/HH.│nnn│$$$║....│%%%│%%%│%%%TTTTT
+───┼───┼───┼────┼───┼───┼────╬───┼───┤~~~~~─┬/┴───┼───┼───╬────┼───┼───┼─TTTTTTT
+$$$│###│...│nnnn│nnn│nnn│nnnn║###│...│~~~~~#/┤HHH#│$$$│###║""""│%%%│%%%│%%TTTTTT
+$$$│###│...│nnnn│nnn│nnn│nnnn║###│...~~~~~#/#│HHH#│$$$│###║""""│,,,│%%%│TTTTTTTT
+───┼───┼───┼────┼───┼───┼────╬───┼─≡≡≡≡≡≡≡/┴─┼────v───┼───╬────┼───┼───┼─TTTTTTT
+nnn│nnn│nnn│nnnn│nnn│EEE│nnnn║""n│n~~~~~#/,,,│+++#│PPP│UUU║""""│%%%│%%%│%%%TTTTT
+nnn│nnn│,,n│nnnn│nnn│EEE│nnnn║""n│~~~~~n/┤,,,│+++#│PPP│UUU║"*""│%%%│%%%│%%TTTTTT
+nnn│nnn│,,n│nnnn│nnn│EEE│nnnn║""n~~~~~n/#│,,,│+++#│PPP│UUU║""""│%%%│%%%│%TTTTTTT
+═══╬═══╬═══╬════╬═══╬═══v════╬══~~~~~╔/╩═╬═══╬════╬═══╬═══╬════╬═══╬═══╬═TTTTTTT
+...│$$$│nnn│nnnn│###│nnn│nnnn║$~~~~~n/nn#│AAA│LLL$│BBB│&&&║%%%%│RRR│RR.│TTTTTTTT
+...│$$$│nnn│$nnn│###│nnn│nnnn~~~~~nn/┤nn#│AAA│LLL$│BBB│&&&║%%%%│RRR│RR.│##TTTTTT
+───┼───┼───┼────┼───┼───┼───~~~~~┌┬/┴┼───┼───┼────┼───┼───╬────┼───┼───┼──TTTTTT
+nnn│...│nnn│nnnn│$$$│nnn│#~~~~~..├/nn│nn#│###│####│$$$│###║####│%%%│%%%│%TTTTTTT
+~~~│...│nnn│nnnn│$$$│nn≡≡≡≡≡≡≡.../nnn│nn#│###│####│$$$│###║####│+++│%%%│%%TTTTTT
+~~~~~..│nnn│nnnn│.$$│~~~~~###║../┤nnn│nn#│###│####│$$$│###║####│+++│%%%│TTTTTTTT
+~~~~~~~└───┼────┴──~~~~~┌────╬┬/┴┼───┼───┼───┼────┼───┼───╬────┼───┼───┼──TTTTTT
+~~~~~~===$$│nnnn~~~~~...│nnnn╠/nn│$$$│nnn│nnn│....│nnn│###║%%%%│%%%│###│$$$TTTTT
+~~~~~~~~~~$│nn~~~~~n│,,.│nnnn/"""│$$$│nnn│nnn│....│nnn│###║%%%%│%%%│###│$TTTTTTT
+~~~~~~~~~~~~~~~~~nnn│,,.│nnn/╣"""│$$$│nnn│nnn│....│nnn│###║%%%%│%%%│###│$$TTTTTT
+~~~~~~~~~~~~~───┬───┼───┼─┬/┴╬───┼───┼───┼───┼────┼───┼───╬────┼───┼───┤TTTTTTTT
+~~~~~~~~~~~===%%│###│%%%│#/##║###│%%%│###│%%%│####│%%%│###║####│%%%│###│%TTTTTTT
+~~~~~~~~~~~~~~~%│###│%%%├/###║###│%%%│###│%%%│####│%%%│###║####│%%%│###│%%%TTTTT
+~~~~~~~~~~~~~~~~└───┼───/┴───╬───┼───┼───┼───┼────┼───┼───╬────┼───┼───┼──TTTTTT
+~~~~~~~~~~~~~~~~~%%%│$$$│....║$$$│...│%%%│$$$│....│%%%│$$$║%%%%│$$$│...│%TTTTTTT
+~~~~~~~~~~~~~~~===%%│$$$│....║$$$│...│%%%│$$$│....│%%%│$$$║%%%%│$$$│...│%TTTTTTT
+~~~~~~~~~~~~~~~~~~~%│$$$│....║$$$│...│%%%│$$$│....│%%%│$$$║%%%%│$$$│...│TTTTTTTT
+~~~~~~~~~~~~~~~~~~~─┼───┼────╬───┼───┼───┼───┼────┼───┼───╬────┼───┼───┼──TTTTTT
+~~~~~~~~~~~~~~!=====│...│%%%%║nnn│$$$│###│...│%%%%│%%%│nnn║####│...│%%%│%%TTTTTT
+~~~~~~~~~~~~~~~~~~~~│...│%%%%║nnn│$$$│###│...│%%%%│%%%│nnn║####│...│%%%│%TTTTTTT
 ```
 
-La escuela, el hospital, las alcantarillas y el parque tienen plano propio, con
-sus niveles:
+`~` el lago y el río · `T` el bosque de las afueras · `≡` los tres puentes ·
+`/` la Diagonal Sur · `║ ═ ╬` las avenidas · `│ ─ ┼ ┌ ┘` la trama de calles ·
+`n` casas · `#` departamentos · `$` comercios · `%` galpones · `A`
+municipalidad · `L` biblioteca · `+` iglesias · `P` comisarías · `B` bomberos ·
+`H` hospital · `E` escuelas · `U` hotel · `&` mercado y muelles · `R` la
+estación · `X` el cementerio · `"` parques · `,` plazas · `!` el faro · `v` las
+bocas de tormenta.
+
+El hospital y las alcantarillas tienen plano propio:
 
 | Plano | Niveles | Qué tiene |
 |---|---|---|
-| Escuela Midwich | sótano, PB, 1º, azotea | patio con torre de reloj, laboratorio, sala de música, biblioteca, caldera |
-| Hospital Alchemilla | −2 a +2 | planta baja completa, sala de máquinas, pisos por ascensor |
-| Alcantarillas | −1 y 0 | túneles, cruce de galerías, oficina, pasarela superior |
-| Lakeside Amusement Park | 0 | calesita, vuelta al mundo, montaña rusa, heladería |
+| Hospital Municipal | −1 a +3 | admisión, guardia, farmacia, quirófano, morgue, sala de máquinas, dos pisos de internación y el helipuerto |
+| Alcantarillas | −1 | pozo de acceso, colector principal, cámara de rejas, oficina de mantenimiento |
 
 ---
 

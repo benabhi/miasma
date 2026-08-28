@@ -8,7 +8,7 @@ cambiar un texto.
 |---|---|
 | el motor de Evennia (descripción de sala, salidas, movimiento, login, errores) | `miasma/locale/es/LC_MESSAGES/django.po` |
 | un comando (su nombre, su ayuda, sus mensajes) | `miasma/commands/*.py` |
-| el mundo (salas, objetos) | `miasma/world/mapa/silent_hill.py` |
+| el mundo (salas, objetos) | `miasma/world/mapa/nebrida.py` |
 
 ---
 

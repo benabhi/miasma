@@ -497,3 +497,22 @@ class CmdPrivado(comms.CmdPage):
     key = "privado"
     aliases = ["mp", "page", "tell"]
     help_category = "comunicación"
+
+
+class CmdMirarOOC(account.CmdOOCLook):
+    """
+    mirar estando fuera de personaje
+
+    Uso:
+      mirar
+
+    Muestra la pantalla de la cuenta: tus sesiones abiertas y tus personajes.
+
+    Es un comando distinto del |wmirar|n de dentro del juego. Fuera de personaje
+    no hay dónde estar parado, así que no hay sala que mirar: lo que se mira es
+    la cuenta.
+    """
+
+    key = "mirar"
+    aliases = ["m", "ver", "look", "l", "ls"]
+    help_category = "general"

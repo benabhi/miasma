@@ -44,7 +44,8 @@ docker compose logs -f game
 ## El mapa
 
 El mundo se genera desde datos, no se construye a mano in-game. Para agregar o
-cambiar salas se edita `world/mapa/silent_hill.py` y se reconstruye:
+cambiar salas se edita `world/mapa/nebrida.py` (textos) o
+`world/mapa/ubicaciones.py` (geometría) y se reconstruye:
 
 ```bash
 docker compose exec game evennia shell -c "from world.mapa.constructor import construir; construir()"

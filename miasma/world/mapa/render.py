@@ -71,7 +71,7 @@ def _salas_del_plano(plano, z):
     from evennia.utils import search
 
     grilla = {}
-    for sala in search.search_tag("silent_hill", category="mapa"):
+    for sala in search.search_tag("nebrida", category="mapa"):
         if sala.destination is not None:
             continue
         datos = posicion(sala)
@@ -222,21 +222,29 @@ def dibujar(sala_actual, radio=3, enmarcar=True, recortar=True):
                 tipo = terreno.get((x, y))
                 if tipo:
                     tipos.add(tipo)
-                    fila.append(iconos.icono_de(tipo))
+                    fila.append(iconos.colorear(tipo, iconos.icono_de(tipo)))
                 else:
                     fila.append(iconos.ICONO_VACIO)
             elif sala == centro:
                 # El jugador va encima de su celda. Si está en un interior
                 # anclado, el marcador cae igual sobre la calle de entrada.
-                fila.append(f"|y{iconos.ICONO_JUGADOR}|n")
+                fila.append(
+                    f"{iconos.COLOR_JUGADOR}{iconos.ICONO_JUGADOR}|n"
+                )
                 tipos.add(sala.db.tipo_mapa)
             else:
                 tipo = sala.db.tipo_mapa
                 tipos.add(tipo)
-                fila.append(iconos.icono_de(tipo))
+                fila.append(
+                    iconos.colorear(
+                        tipo, iconos.icono_de(tipo, sala.db.vecinos_trama)
+                    )
+                )
             if x < x_hasta:
                 fila.append(
-                    iconos.MURO_VERTICAL if muro_vertical(x, y) else iconos.PASO
+                    iconos.colorear("muro", iconos.MURO_VERTICAL)
+                    if muro_vertical(x, y)
+                    else iconos.PASO
                 )
         lineas.append("".join(fila))
 
@@ -255,23 +263,37 @@ def dibujar(sala_actual, radio=3, enmarcar=True, recortar=True):
             continue
         sep = []
         for i, x in enumerate(range(x_desde, x_hasta + 1)):
-            sep.append(iconos.MURO_HORIZONTAL if separadores[i] else iconos.PASO)
+            sep.append(
+                iconos.colorear("muro", iconos.MURO_HORIZONTAL)
+                if separadores[i]
+                else iconos.PASO
+            )
             if x < x_hasta:
+                esquina = _esquina(
+                    separadores[i],
+                    separadores[i + 1],
+                    muro_vertical(x, y),
+                    muro_vertical(x, y - 1),
+                )
                 sep.append(
-                    _esquina(
-                        separadores[i],
-                        separadores[i + 1],
-                        muro_vertical(x, y),
-                        muro_vertical(x, y - 1),
-                    )
+                    iconos.colorear("muro", esquina)
+                    if esquina != iconos.PASO
+                    else esquina
                 )
         lineas.append("".join(sep))
 
     if enmarcar:
-        ancho = max(len(ansi.strip_ansi(l)) for l in lineas)
-        lineas = [f"|x│|n{l}{' ' * (ancho - len(ansi.strip_ansi(l)))}|x│|n" for l in lineas]
-        tapa = "|x" + "─" * ancho + "|n"
-        lineas = [f"|x┌|n{tapa}|x┐|n"] + lineas + [f"|x└|n{tapa}|x┘|n"]
+        # El marco va en sombreado y no en líneas: las líneas son las calles, y
+        # un marco de líneas se confunde con una avenida en el borde del mapa.
+        #
+        # El ancho se cuenta en celdas y no se mide sobre el texto: con los
+        # códigos de color de por medio, medir la cadena es contar caracteres
+        # que no se ven.
+        marco = iconos.MARCO
+        ancho = (x_hasta - x_desde + 1) * 2 - 1
+        lineas = [f"|x{marco}|n{l}|x{marco}|n" for l in lineas]
+        tapa = "|x" + marco * (ancho + 2) + "|n"
+        lineas = [tapa] + lineas + [tapa]
 
     return (lineas, tipos)
 
@@ -281,7 +303,7 @@ def niveles_del_plano(plano):
     from evennia.utils import search
 
     niveles = set()
-    for sala in search.search_tag("silent_hill", category="mapa"):
+    for sala in search.search_tag("nebrida", category="mapa"):
         if sala.destination is not None:
             continue
         datos = posicion(sala)

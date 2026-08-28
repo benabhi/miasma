@@ -122,7 +122,7 @@ class AccountCmdSet(default_cmds.AccountCmdSet):
                 cuenta.CmdColor,
                 cuenta.CmdPrivado,
                 jugador.CmdApodo,
-                jugador.CmdMirar,
+                cuenta.CmdMirarOOC,
                 jugador.CmdAyuda,
             ),
         )

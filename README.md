@@ -120,11 +120,11 @@ docker compose up -d
 
 ## El mapa de pruebas
 
-El mundo actual es una reconstrucción de la ciudad de *Silent Hill* (1999):
-309 salas y 1091 salidas sobre una retícula de calles con manzanas —se camina de punta a punta en
-cualquier dirección—, con la escuela Midwich y el hospital Alchemilla
-recorribles por dentro y un minimapa permanente en cada `mirar`. El juego
-arranca en el Café 5to2.
+El mundo actual es **Nébrida**: una ciudad mediana de provincia sobre un lago,
+partida por un río, con centro cívico, barrios, puerto y zona de galpones.
+80×40 celdas, 2452 salas y 9326 salidas, con retícula de calles, avenidas, una
+diagonal, tres puentes y bosque en las afueras. El juego arranca en la Plaza
+Mayor.
 
 Se genera entero desde datos y se reconstruye con un comando:
 
@@ -133,8 +133,8 @@ docker compose exec game evennia shell -c "from world.mapa.constructor import co
 docker compose restart game
 ```
 
-o, desde el juego y como superusuario, `batchcode batch.silent_hill` (el
-reinicio hace falta igual). Detalles, traza y cómo agregar salas en
+o, desde el juego y como superusuario, `batchcode batch.nebrida` (el reinicio
+hace falta igual). Detalles, traza y cómo agregar salas en
 [`docs/MAPA.md`](docs/MAPA.md).
 
 ---

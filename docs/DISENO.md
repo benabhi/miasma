@@ -36,8 +36,8 @@ Cada fase debe quedar jugable antes de empezar la siguiente.
 
 ### Fase 0 — Cimientos *(hecho)*
 - Entorno dockerizado, Evennia 6.1.0, Postgres, gamedir montado.
-- Escenario de pruebas: la ciudad de Silent Hill, generada desde datos y
-  reconstruible con un comando (ver `MAPA.md`).
+- Escenario de pruebas: Nébrida, una ciudad de 2452 salas generada desde
+  datos y reconstruible con un comando (ver `MAPA.md`).
 - Juego en español: comandos de jugador traducidos y catálogo del motor al
   100% (ver `TRADUCCION.md`).
 

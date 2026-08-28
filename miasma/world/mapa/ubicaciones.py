@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-La grilla del mundo: qué hay en cada celda de cada plano.
+La grilla de Nébrida: qué hay en cada celda de cada plano.
 
 Cada plano se dibuja como una imagen de texto, un carácter por celda. Es la
 forma más directa de garantizar lo que queremos: **una grilla densa, sin
@@ -12,17 +12,15 @@ huecos**. Si en el dibujo no queda un espacio en blanco, en el juego tampoco.
 Casi todos los caracteres son salas por las que se camina, y el constructor las
 conecta automáticamente con sus vecinas ortogonales: no hay que declarar una
 sola salida norte/sur/este/oeste a mano. Los tipos de `iconos.INTRANSITABLES`
-—agua, arboleda, muro— se dibujan pero no son salas: son el borde del mundo,
-no un agujero.
+—agua, arboleda, muro— se dibujan pero no son salas: son el borde del mundo, no
+un agujero.
 
-Las salas con nombre y descripción propios (las de `silent_hill.py`) reclaman
-su celda en `NOMBRADAS`. Las demás celdas las llena el constructor con salas
-genéricas según su tipo, para que el pueblo sea caminable de punta a punta sin
-tener que escribir doscientas descripciones.
-
-`ANCLADAS` son los interiores de una sola sala. No ocupan celda: dibujar un
-mapa de 1×1 para el interior de un bar no le sirve a nadie, así que cuando el
-jugador está adentro se dibuja la calle de la que entró.
+La ciudad tiene unas dos mil quinientas salas. Las que llevan nombre y
+descripción propios están en `nebrida.py` y reclaman su celda en `NOMBRADAS`;
+son los lugares singulares, dos docenas. Las demás las arma el constructor con
+`RELLENO` y, si son calle, con el nombre de la calle que sale de `CALLES`. Una
+ciudad no necesita dos mil descripciones distintas: necesita que cada esquina
+sepa cómo se llama.
 """
 
 # --------------------------------------------------------------------------
@@ -31,195 +29,195 @@ jugador está adentro se dibuja la calle de la que entró.
 
 LEYENDA = {
     "c": "calle",
-    "x": "cruce",
     "a": "avenida",
-    "v": "vereda",
+    "D": "diagonal",
     "p": "puente",
-    "l": "callejon",
+    "v": "vereda",
+    "z": "plaza",
+    "q": "parque",
     "d": "descampado",
     "e": "edificio",
     "h": "casa",
     "s": "comercio",
+    "m": "mercado",
+    "g": "industria",
     "i": "iglesia",
-    "E": "escuela",
     "H": "hospital",
     "P": "comisaria",
-    "M": "hotel",
-    "g": "industria",
-    "o": "interior",
-    "-": "pasillo",
-    "X": "escalera",
-    "u": "sotano",
-    "^": "azotea",
-    "*": "atraccion",
+    "B": "bomberos",
+    "E": "escuela",
+    "L": "biblioteca",
+    "A": "municipalidad",
+    "U": "hotel",
+    "X": "cementerio",
+    "R": "estacion_tren",
     "&": "muelle",
     "!": "faro",
+    "*": "atraccion",
     "V": "alcantarilla",
     "~": "agua",
     "T": "arbol",
     "#": "muro",
+    "o": "interior",
+    "-": "pasillo",
+    "x": "escalera",
+    "u": "sotano",
+    "^": "azotea",
 }
 
 # --------------------------------------------------------------------------
-# EL PUEBLO
+# NÉBRIDA
 #
-# Old Silent Hill al noroeste, el canal en el medio con el puente levadizo, el
-# centro al este y el área turística bajando hacia el lago Toluca. Un solo
-# plano continuo: se camina de punta a punta.
+# El lago al suroeste, el río bajando del norte y curvando al suroeste hasta
+# desembocar en él, tres puentes, la ciudad a los dos lados y bosque en las
+# afueras del norte y del este.
 #
-#       x  0 1 2 3 4 5 6 7 8 9 10
+# La retícula tiene separaciones desparejas a propósito: manzanas de dos, tres
+# y cuatro celdas mezcladas, más una diagonal que corta el damero. Una ciudad
+# con todas las manzanas iguales se lee como papel cuadriculado.
 # --------------------------------------------------------------------------
 
-# El pueblo es una retícula de calles con manzanas de 2x2: hay calle cada
-# tres celdas en los dos ejes, y lo que queda entre ellas son las manzanas.
-# Ese patrón es lo que hace que el mapa se lea como una ciudad y no como una
-# lista de cruces sueltos.
+NEBRIDA = """
+TTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTTT~~~~~TTTTTTTTTTTTTTTTTTTTTTTTTTTTTT
+TTTThhTTTTTTTTTTTTTTchTTTTTTTTTTTTTThcTTTTTTT~~~~~TThhTTTTTTTTTTTTTTggTTTTTTTTTT
+TThchhhcTTTTThhTTThhchhhTTTTTahTTThhhchhTTTT~~~~~TchhhchTTTTTeeTTTgcgggcTTTTTTTT
+hhhchhhchTTThhhhchhhchhhcTTThahhhchhhchhhTTT~~~~~hchhhDhhTTTeeecgggcgggcgTTTTTTT
+cccccccccccccccccccccccccccccaccccccccccccc~~~~~cccccDccccacccccccccccccTTTTTTTT
+hhhchhhchhhcsssscXXXcXXdchhhhahhhcssschhhcppppppphchDhchhhaEEEgcgggceeecssTTTTTT
+hhhchhhchhhcsssscXXXcXXdcPPhhahhhcBBschhhc~~~~~hhhcDhhchhhaEEEgcgggceeecssTTTTTT
+hhhchhhchhhcsssscXXXcXXdcPPhhahhhcBBschhhc~~~~~hhhDhhhchhhaEEEgcgggceeecsTTTTTTT
+cccccccccccccccccccccccccccccaccccccccccc~~~~~cccDccccccccacccccccccccccccTTTTTT
+dddchhhcssscddddchhhcssscddddassscdddchhh~~~~~HHDdchhhcsssaddddcgggcgggcTTTTTTTT
+dddchhhcsssciiddczzhcssscddddassscdddchh~~~~~cHDHdchhhcsssaddddcgggcgggcggTTTTTT
+dddchhhcsssciiddczzhcssscddddassscdddch~~~~~scDHHdchhhcsssaddddcgggcgggcgggTTTTT
+cccccccccccccccccccccccccccccacccccccc~~~~~ccDccccccccccccaccccccccccccccTTTTTTT
+sssceeecdddchhhhchhhchhhchhhhaeeecdddc~~~~~eDcHHHecsssceeeaqqqqcgggcgggcggTTTTTT
+sssceeecdddchhhhchhhchhhchhhhaeeecddd~~~~~eDecHHHecsssceeeaqqqqczzzcgggcTTTTTTTT
+cccccccccccccccccccccccccccccacccccpppppppDcccccccVcccccccaccccccccccccccTTTTTTT
+hhhchhhchhhchhhhchhhcEEEchhhhaqqhch~~~~~eDzzzciiiecPPPcUUUaqqqqcgggcgggcgggTTTTT
+hhhchhhczzhchhhhchhhcEEEchhhhaqqhc~~~~~hDczzzciiiecPPPcUUUaq*qqcgggcgggcggTTTTTT
+hhhchhhczzhchhhhchhhcEEEchhhhaqqh~~~~~hDeczzzciiiecPPPcUUUaqqqqcgggcgggcgTTTTTTT
+aaaaaaaaaaaaaaaaaaaaaaaaVaaaaaaa~~~~~aDaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaTTTTTTT
+dddcssschhhchhhhceeechhhchhhhas~~~~~hDhhecAAAcLLLscBBBcmmmaggggcRRRcRRdcTTTTTTTT
+dddcssschhhcshhhceeechhhchhhh~~~~~hhDchhecAAAcLLLscBBBcmmmaggggcRRRcRRdceeTTTTTT
+cccccccccccccccccccccccccccc~~~~~ccDccccccccccccccccccccccacccccccccccccccTTTTTT
+hhhcdddchhhchhhhcssschhhce~~~~~ddcDhhchheceeeceeeecsssceeeaeeeecgggcgggcgTTTTTTT
+~~~cdddchhhchhhhcssschhpppppppdddDhhhchheceeeceeeecsssceeeaeeeeciiicgggcggTTTTTT
+~~~~~ddchhhchhhhcdssc~~~~~eeeaddDchhhchheceeeceeeecsssceeeaeeeeciiicgggcTTTTTTTT
+~~~~~~~cccccccccccc~~~~~cccccacDccccccccccccccccccccccccccacccccccccccccccTTTTTT
+~~~~~~&&&sschhhh~~~~~dddchhhhaDhhcssschhhchhhcddddchhhceeeaggggcgggceeecsssTTTTT
+~~~~~~~~~~schh~~~~~hczzdchhhhDqqqcssschhhchhhcddddchhhceeeaggggcgggceeecsTTTTTTT
+~~~~~~~~~~~~~~~~~hhhczzdchhhDaqqqcssschhhchhhcddddchhhceeeaggggcgggceeecssTTTTTT
+~~~~~~~~~~~~~ccccccccccccccDcaccccccccccccccccccccccccccccacccccccccccccTTTTTTTT
+~~~~~~~~~~~&&&ggceeecgggceDeeaeeecgggceeecgggceeeecgggceeeaeeeecgggceeecgTTTTTTT
+~~~~~~~~~~~~~~~gceeecgggcDeeeaeeecgggceeecgggceeeecgggceeeaeeeecgggceeecgggTTTTT
+~~~~~~~~~~~~~~~~ccccccccDccccaccccccccccccccccccccccccccccacccccccccccccccTTTTTT
+~~~~~~~~~~~~~~~~~gggcssscddddassscdddcgggcssscddddcgggcsssaggggcssscdddcgTTTTTTT
+~~~~~~~~~~~~~~~&&&ggcssscddddassscdddcgggcssscddddcgggcsssaggggcssscdddcgTTTTTTT
+~~~~~~~~~~~~~~~~~~~gcssscddddassscdddcgggcssscddddcgggcsssaggggcssscdddcTTTTTTTT
+~~~~~~~~~~~~~~~~~~~ccccccccccaccccccccccccccccccccccccccccacccccccccccccccTTTTTT
+~~~~~~~~~~~~~~!&&&&&cdddcggggahhhcsssceeecdddcggggcgggchhhaeeeecdddcgggcggTTTTTT
+~~~~~~~~~~~~~~~~~~~~cdddcggggahhhcsssceeecdddcggggcgggchhhaeeeecdddcgggcgTTTTTTT
+"""
+
+# --------------------------------------------------------------------------
+# Cómo se llama cada calle
 #
-#   Old Silent Hill   x 0..9   y 12..21   calles en x 0,3,6,9  y 12,15,18,21
-#   canal             x 10..11            con el puente levadizo en y 12
-#   Central           x 12..18 y 12..21   calles en x 12,15,18  y 12,15,18,21
-#   área turística    x 12..18 y 0..11    calles en x 12,15,18  y 0,3,6,9
-#   lago Toluca       x 0..11  y 0..11
-#
-# Bachman Road (x 9 y x 18) es la arteria: cruza el pueblo entero.
-PUEBLO = """
-TTTTTTTTTd~~TTTTTTTT
-xccxccxcca~~xccxccaT
-chhchhcssa~~cPPcssaT
-chhchhcdda~~cPPcseaT
-xccxccxcca~~xccxccaT
-chhchhcssa~~csscHHaT
-chlchdcgga~~csdcHHaT
-xccxccxcca~~xccxccaT
-csscEEciga~~ceeceeaT
-csdcEEciga~~ceeceeaT
-xccxccxccappxccVccaT
-~~~~~~~~~~~~ceecMMaT
-~~~~~~~~~~~~ceecMMaT
-~~~~~~~~~~~~xccxcca*
-~~~~~~~~~~~~chhcssaT
-~~~~~~~~~~~~chhcssaT
-~~~~~~~~~~~pxccxccaT
-~~~~~~~~~~~~csdcsMaT
-~~~~~~~~~~~~csdcMMaT
-~~~~~~~~~~~!xccxccaT
-~~~~~~~~~~~~cddcddaT
-~~~~~~~~~~~~cddcddaT
-~~~~~~~~~~~&xccxccaT
-"""
+# El constructor le pone a cada tramo de calle el nombre de la calle a la que
+# pertenece, y a cada esquina el de las dos que se cruzan. Es lo que hace que
+# caminar por la ciudad se sienta como caminar por una ciudad y no por una
+# grilla: "Calle Undiano y Calle Rovira" ubica; "Calzada" no.
+# --------------------------------------------------------------------------
 
-ESCUELA_PB = """
----
--d-
-#o#
-#c#
-"""
+CALLES = {
+    # este-oeste, por fila
+    "eo": {
+        2: "Calle del Puerto",
+        6: "Calle Almenara",
+        9: "Calle Verdial",
+        13: "Calle Ostrada",
+        17: "Calle Sagrera",
+        20: "Avenida Nébrida",
+        24: "Calle Berlanga",
+        27: "Calle Undiano",
+        31: "Calle Marzal",
+        35: "Calle del Cementerio",
+    },
+    # norte-sur, por columna
+    "ns": {
+        3: "Calle Arriaga",
+        7: "Calle Zubieta",
+        11: "Calle Olvera",
+        16: "Calle Trévano",
+        20: "Calle Cárcava",
+        24: "Calle Solmena",
+        29: "Avenida de los Alisos",
+        33: "Calle Vilaña",
+        37: "Calle Amézaga",
+        41: "Calle Rovira",
+        45: "Calle Bergara",
+        50: "Calle Ochoa",
+        54: "Calle Alduín",
+        58: "Avenida del Río",
+        63: "Calle Ferrán",
+        67: "Calle Maruján",
+        71: "Calle de los Galpones",
+    },
+}
 
-ESCUELA_1P = """
-o-#
--o#
-o##
-###
-"""
+# La diagonal no cae ni en una fila ni en una columna: tiene su propio nombre.
+NOMBRE_DIAGONAL = "Diagonal Sur"
 
-ESCUELA_AZOTEA = """
-###
-^##
-###
-###
-"""
-
-ESCUELA_SOTANO = """
-###
-u##
-###
-###
-"""
-
-HOSPITAL_PB = """
-###o
-oooo
-ooo#
-#cX#
-"""
-
-HOSPITAL_1 = """
-####
-####
-####
-##-#
-"""
-
-HOSPITAL_2 = """
-####
-####
-####
-##-#
-"""
+# --------------------------------------------------------------------------
+# Los interiores, cada uno con su plano y sus niveles
+# --------------------------------------------------------------------------
 
 HOSPITAL_SOTANO = """
 ####
-####
-#X##
-####
+uu##
 """
 
-HOSPITAL_MAQUINAS = """
-####
-####
-#u##
-####
+HOSPITAL_PB = """
+##o#
+ooo#
+#x##
+"""
+
+HOSPITAL_1 = """
+---#
+#-##
+"""
+
+HOSPITAL_2 = """
+---#
+#-##
+"""
+
+HOSPITAL_AZOTEA = """
+^^^#
+#^##
 """
 
 CLOACAS = """
-#X
-#V
-oV
-#V
-#X
+#v
+#v
+vv
+#v
 """
 
-CLOACAS_ALTO = """
-##
-##
-#V
-##
-##
-"""
-
-PARQUE = """
-T*T
-*d*
-TTT
-"""
-
-# plano -> {nivel z: dibujo}
 PLANOS = {
-    "pueblo": {"nombre": "Silent Hill", "niveles": {0: PUEBLO}},
-    "escuela": {
-        "nombre": "Escuela Midwich",
-        "niveles": {
-            -1: ESCUELA_SOTANO,
-            0: ESCUELA_PB,
-            1: ESCUELA_1P,
-            2: ESCUELA_AZOTEA,
-        },
-    },
+    "nebrida": {"nombre": "Nébrida", "niveles": {0: NEBRIDA}},
     "hospital": {
-        "nombre": "Hospital Alchemilla",
+        "nombre": "Hospital Municipal",
         "niveles": {
-            -2: HOSPITAL_MAQUINAS,
             -1: HOSPITAL_SOTANO,
             0: HOSPITAL_PB,
             1: HOSPITAL_1,
             2: HOSPITAL_2,
+            3: HOSPITAL_AZOTEA,
         },
     },
-    "cloacas": {
-        "nombre": "Alcantarillas",
-        "niveles": {-1: CLOACAS, 0: CLOACAS_ALTO},
-    },
-    "parque": {"nombre": "Lakeside Amusement Park", "niveles": {0: PARQUE}},
+    "cloacas": {"nombre": "Alcantarillas", "niveles": {-1: CLOACAS}},
 }
 
 NOMBRES_PLANO = {clave: spec["nombre"] for clave, spec in PLANOS.items()}
@@ -229,291 +227,242 @@ NOMBRES_PLANO = {clave: spec["nombre"] for clave, spec in PLANOS.items()}
 # --------------------------------------------------------------------------
 
 NOMBRADAS = {
-    # --- Old Silent Hill: cruces -------------------------------------------
-    #     Bradbury x0 · Midwich x3 · Levin x6 · Bachman x9
-    #     Bloch y12 · Ellroy y15 · Matheson y18 · Finney y21
-    "osh_finney_bradbury": ("pueblo", 0, 21, 0),
-    "osh_finney_midwich": ("pueblo", 3, 21, 0),
-    "osh_finney_levin": ("pueblo", 6, 21, 0),
-    "osh_finney_bachman": ("pueblo", 9, 21, 0),
-    "osh_matheson_bradbury": ("pueblo", 0, 18, 0),
-    "osh_matheson_midwich": ("pueblo", 3, 18, 0),
-    "osh_matheson_levin": ("pueblo", 6, 18, 0),
-    "osh_matheson_bachman": ("pueblo", 9, 18, 0),
-    "osh_ellroy_bradbury": ("pueblo", 0, 15, 0),
-    "osh_ellroy_midwich": ("pueblo", 3, 15, 0),
-    "osh_ellroy_levin": ("pueblo", 6, 15, 0),
-    "osh_ellroy_bachman": ("pueblo", 9, 15, 0),
-    "osh_bloch_bradbury": ("pueblo", 0, 12, 0),
-    "osh_bloch_midwich": ("pueblo", 3, 12, 0),
-    "osh_bloch_levin": ("pueblo", 6, 12, 0),
-    "osh_bloch_bachman": ("pueblo", 9, 12, 0),
-    "osh_bachman_norte": ("pueblo", 9, 22, 0),
-    "osh_callejon_basket": ("pueblo", 8, 19, 0),
-    "osh_callejon_gordon": ("pueblo", 2, 16, 0),
-    "osh_puente_levadizo": ("pueblo", 10, 12, 0),
-    # --- Old Silent Hill: lo que hay en las manzanas -----------------------
-    "int_cafe_5to2": ("pueblo", 8, 20, 0),
-    "int_tienda": ("pueblo", 7, 20, 0),
-    "int_queen_burger": ("pueblo", 8, 17, 0),
-    "int_casa_levin": ("pueblo", 5, 17, 0),
-    "int_casa_gordon": ("pueblo", 1, 16, 0),
-    "int_iglesia_balkan": ("pueblo", 7, 13, 0),
-    "int_cut_rite": ("pueblo", 1, 13, 0),
-    "int_estacion_servicio": ("pueblo", 8, 16, 0),
-    # --- Central Silent Hill -----------------------------------------------
-    #     Simmons x12 · Sagan x15 · Bachman x18
-    #     Katz y12 · Munson y15 · Koontz y18 · Crichton y21
-    "csh_cabecera_puente": ("pueblo", 11, 12, 0),
-    "csh_crichton_simmons": ("pueblo", 12, 21, 0),
-    "csh_crichton_sagan": ("pueblo", 15, 21, 0),
-    "csh_crichton_bachman": ("pueblo", 18, 21, 0),
-    "csh_koontz_simmons": ("pueblo", 12, 18, 0),
-    "csh_koontz_sagan": ("pueblo", 15, 18, 0),
-    "csh_koontz_bachman": ("pueblo", 18, 18, 0),
-    "csh_munson_simmons": ("pueblo", 12, 15, 0),
-    "csh_munson_sagan": ("pueblo", 15, 15, 0),
-    "csh_munson_bachman": ("pueblo", 18, 15, 0),
-    "csh_katz_simmons": ("pueblo", 12, 12, 0),
-    "csh_katz_sagan": ("pueblo", 15, 12, 0),
-    "csh_katz_bachman": ("pueblo", 18, 12, 0),
-    "int_comisaria": ("pueblo", 14, 20, 0),
-    "int_green_lion": ("pueblo", 17, 20, 0),
-    "int_cafe_sun": ("pueblo", 13, 17, 0),
-    "int_town_center": ("pueblo", 13, 14, 0),
-    # --- Área turística ----------------------------------------------------
-    #     Sandford x12 · Nathan Ave x15 · Bachman x18
-    "res_bachman": ("pueblo", 18, 11, 0),
-    "res_craig": ("pueblo", 18, 9, 0),
-    "res_weaver": ("pueblo", 18, 6, 0),
-    "res_nathan": ("pueblo", 15, 6, 0),
-    "res_bartlett": ("pueblo", 15, 3, 0),
-    "res_sandford": ("pueblo", 12, 3, 0),
-    "res_muelle": ("pueblo", 11, 0, 0),
-    "res_faro": ("pueblo", 11, 3, 0),
-    "res_puente_sandford": ("pueblo", 11, 6, 0),
-    "res_entrada_parque": ("pueblo", 19, 9, 0),
-    "int_annies_bar": ("pueblo", 17, 8, 0),
-    "int_bowl_o_rama": ("pueblo", 16, 8, 0),
-    "int_indian_runner": ("pueblo", 13, 5, 0),
-    "int_motel_recepcion": ("pueblo", 17, 5, 0),
-    "int_hotel_lakeview": ("pueblo", 16, 11, 0),
-    # --- Escuela Midwich ---------------------------------------------------
-    "esc_entrada": ("escuela", 1, 0, 0),
-    "esc_recepcion": ("escuela", 1, 1, 0),
-    "esc_patio": ("escuela", 1, 2, 0),
-    "esc_pasillo_pb_izq": ("escuela", 0, 2, 0),
-    "esc_pasillo_pb_der": ("escuela", 2, 2, 0),
-    "esc_caldera": ("escuela", 0, 2, -1),
-    "esc_pasillo_1p_izq": ("escuela", 0, 2, 1),
-    "esc_lab_quimica": ("escuela", 1, 2, 1),
-    "esc_sala_musica": ("escuela", 0, 1, 1),
-    "esc_biblioteca": ("escuela", 0, 3, 1),
-    "esc_azotea": ("escuela", 0, 2, 2),
-    # --- Hospital Alchemilla -----------------------------------------------
-    "hos_patio": ("hospital", 1, 0, 0),
-    "hos_ascensor": ("hospital", 2, 0, 0),
-    "hos_oficina": ("hospital", 0, 1, 0),
+    # --- Nébrida ---
+    "plaza_mayor": ("nebrida", 42, 21, 0),
+    "municipalidad": ("nebrida", 42, 18, 0),
+    "catedral": ("nebrida", 46, 21, 0),
+    "biblioteca": ("nebrida", 46, 18, 0),
+    "comisaria_central": ("nebrida", 51, 21, 0),
+    "cuartel_bomberos": ("nebrida", 51, 18, 0),
+    "mercado": ("nebrida", 55, 18, 0),
+    "hospital_frente": ("nebrida", 46, 25, 0),
+    "estacion_tren": ("nebrida", 64, 18, 0),
+    "cementerio": ("nebrida", 17, 32, 0),
+    "faro": ("nebrida", 14, 1, 0),
+    "puente_mayor": ("nebrida", 35, 24, 0),
+    "boca_alcantarilla": ("nebrida", 24, 20, 0),
+    # --- Hospital Municipal ---
+    "hos_farmacia": ("hospital", 0, 1, 0),
     "hos_recepcion": ("hospital", 1, 1, 0),
-    "hos_examen": ("hospital", 2, 1, 0),
-    "hos_direccion": ("hospital", 0, 2, 0),
-    "hos_cocina": ("hospital", 1, 2, 0),
-    "hos_farmacia": ("hospital", 2, 2, 0),
-    "hos_consultorio": ("hospital", 3, 2, 0),
-    "hos_reuniones": ("hospital", 3, 3, 0),
-    "hos_pasillo_2": ("hospital", 2, 0, 1),
-    "hos_pasillo_3": ("hospital", 2, 0, 2),
-    "hos_escalera_sotano": ("hospital", 1, 1, -1),
-    "hos_generador": ("hospital", 1, 1, -2),
-    # --- Alcantarillas -----------------------------------------------------
-    "alc_entrada": ("cloacas", 1, 4, -1),
-    "alc_tunel_norte": ("cloacas", 1, 3, -1),
-    "alc_cruce": ("cloacas", 1, 2, -1),
-    "alc_oficina": ("cloacas", 0, 2, -1),
-    "alc_tunel_sur": ("cloacas", 1, 1, -1),
-    "alc_salida": ("cloacas", 1, 0, -1),
-    "alc_nivel_superior": ("cloacas", 1, 2, 0),
-    # --- Lakeside Amusement Park -------------------------------------------
-    "par_calesita": ("parque", 1, 2, 0),
-    "par_montana_rusa": ("parque", 0, 1, 0),
-    "par_explanada": ("parque", 1, 1, 0),
-    "par_vuelta_al_mundo": ("parque", 2, 1, 0),
+    "hos_guardia": ("hospital", 2, 1, 0),
+    "hos_quirofano": ("hospital", 2, 2, 0),
+    "hos_escalera": ("hospital", 1, 0, 0),
+    "hos_generador": ("hospital", 0, 0, -1),
+    "hos_morgue": ("hospital", 1, 0, -1),
+    "hos_internacion_1": ("hospital", 1, 0, 1),
+    "hos_internacion_2": ("hospital", 1, 0, 2),
+    "hos_helipuerto": ("hospital", 1, 0, 3),
+    # --- Alcantarillas ---
+    "alc_pozo": ("cloacas", 1, 3, -1),
+    "alc_colector": ("cloacas", 1, 2, -1),
+    "alc_camara": ("cloacas", 1, 1, -1),
+    "alc_oficina": ("cloacas", 0, 1, -1),
 }
 
-# --------------------------------------------------------------------------
-# Interiores de una sola sala, sin celda propia
-# --------------------------------------------------------------------------
-
-ANCLADAS = {
-    "osh_torre_control": "industria",
-    "int_motel_hab3": "interior",
-    "int_motel_garage": "industria",
-    "esc_enfermeria": "sala",
-    "esc_aula_pb": "sala",
-    "esc_torre_reloj": "interior",
-    "esc_reserva": "sala",
-    "par_heladeria": "comercio",
-}
+# Interiores de una sola sala, sin celda propia. Por ahora no hay: todo lo que
+# se puede visitar ocupa su lugar en algún plano.
+ANCLADAS = {}
 
 # --------------------------------------------------------------------------
-# Las celdas que no reclamó nadie: salas genéricas según su tipo.
+# Las celdas que no reclamó nadie
 #
-# Rellenan la grilla para que se pueda caminar por todos lados sin escribir
-# doscientas descripciones a mano. Son deliberadamente sobrias: el detalle está
-# en las salas con nombre.
+# Dos mil salas genéricas serían dos mil salas iguales, así que cada tipo tiene
+# varias versiones y el constructor elige una según la coordenada: siempre la
+# misma para la misma celda, distinta de la de al lado.
 # --------------------------------------------------------------------------
 
 RELLENO = {
-    "calle": (
-        "Calzada",
-        "Un tramo de calle entre dos esquinas. Asfalto partido, un cordón que "
-        "en algún momento fue blanco, y la niebla cerrando el fondo a los diez "
-        "metros.",
-    ),
-    "cruce": (
-        "Cruce",
-        "Cuatro esquinas iguales, sin cartel que diga cuál es cuál. El "
-        "semáforo cuelga apagado.",
-    ),
-    "avenida": (
-        "Avenida",
-        "Dos manos separadas por un cantero central con árboles pelados. Es "
-        "ancha, y esa anchura no tranquiliza: se ve poco y de lejos.",
-    ),
-    "vereda": (
-        "Vereda",
-        "Un tramo de vereda ancha, de las que se hicieron pensando en gente "
-        "paseando. Baldosas flojas y ceniza acumulada contra el cordón.",
-    ),
-    "callejon": (
-        "Callejón",
-        "Dos metros de ancho entre medianeras, con contenedores y cables de "
-        "ropa cruzando arriba. Acá la niebla se queda quieta.",
-    ),
-    "descampado": (
-        "Baldío",
-        "Terreno vacío entre construcciones: pasto quemado, escombros y un "
-        "cerco de alambre caído. Alguien apiló ladrillos, hace tiempo.",
-    ),
-    "casa": (
-        "Casa abandonada",
-        "Una vivienda de tablas con el porche hundido y las cortinas corridas. "
-        "La puerta del frente está abierta lo justo para que entre el aire.",
-    ),
-    "edificio": (
-        "Edificio de departamentos",
-        "Cuatro pisos de ladrillo con balcones franceses y macetas muertas. El "
-        "portero eléctrico tiene doce timbres y ninguno anda.",
-    ),
-    "comercio": (
-        "Local a la calle",
-        "Un negocio chico con la persiana a medio bajar y la vidriera "
-        "empañada por dentro. El cartel perdió la mitad de las letras.",
-    ),
-    "industria": (
-        "Galpón",
-        "Chapa acanalada, portón corredizo y un muelle de carga a la altura de "
-        "un camión. Huele a aceite quemado.",
-    ),
-    "escuela": (
-        "Paredón de la escuela",
-        "El muro perimetral de la Escuela Midwich: ladrillo, tres metros, "
-        "rematado con una reja de puntas.",
-    ),
-    "pasillo": (
-        "Pasillo",
-        "Un tramo de pasillo con piso encerado y la mitad de los tubos "
-        "fluorescentes apagados.",
-    ),
-    "interior": (
-        "Sala",
-        "Un ambiente cerrado, sin ventanas a la calle.",
-    ),
-    "azotea": (
-        "Azotea",
-        "Membrana asfáltica, maquinaria de ventilación y un parapeto bajo. "
-        "Desde acá se ve niebla en todas las direcciones.",
-    ),
-    "sotano": (
-        "Subsuelo",
-        "Hormigón sin revestir, caños forrados y una lámpara enjaulada cada "
-        "varios metros.",
-    ),
-    "atraccion": (
-        "Atracción del parque",
-        "Una estructura de hierro pintado, con la cola de acceso marcada por "
-        "vallas cromadas. Sigue funcionando, sola.",
-    ),
-    "alcantarilla": (
-        "Galería",
-        "Un caño de sección ovalada por el que se camina erguido, con una "
-        "banquina de cemento a cada lado del canal.",
-    ),
-    "puente": (
-        "Puente",
-        "Tablero de acero remachado sobre agua negra y quieta.",
-    ),
-    "muelle": (
-        "Muelle",
-        "Tablones hinchados de humedad sobre el agua, con bitas de hierro y "
-        "neumáticos colgando como defensas.",
-    ),
-    "iglesia": (
-        "Atrio",
-        "El terreno de la iglesia: piedra gris, un cerco bajo de hierro y "
-        "canteros con la tierra revuelta.",
-    ),
-    "hospital": (
-        "Predio del hospital",
-        "Terreno del Hospital Alchemilla: reja de lanzas, cantero de boj sin "
-        "podar y la rampa de ambulancias vacía.",
-    ),
-    "comisaria": (
-        "Frente de la comisaría",
-        "Ladrillo visto, dos escalones de granito y un farol azul sobre la "
-        "puerta. El farol está prendido.",
-    ),
-    "hotel": (
-        "Explanada del hotel",
-        "Una playa de estacionamiento en pendiente, con una marquesina de "
-        "luces de globo. La mitad están fundidas.",
-    ),
-    "faro": (
-        "Punta del faro",
-        "Una punta de piedra que entra en el lago. La torre blanca y roja gira "
-        "su linterna cada doce segundos y no ilumina nada.",
-    ),
-    "escalera": (
-        "Escalera",
-        "Hormigón sin revestir, pasamanos de caño pintado y una lámpara "
-        "enjaulada en cada descanso.",
-    ),
-    "estacionamiento": (
-        "Playón",
-        "Cemento marcado con líneas amarillas descoloridas y unos pocos autos "
-        "estacionados prolijamente, cubiertos de ceniza.",
-    ),
+    "calle": [
+        ("Calzada", "Asfalto partido, un cordón que alguna vez fue blanco y la "
+         "niebla cerrando el fondo a los diez metros."),
+        ("Calzada", "Media calle levantada por una cuadrilla que no volvió a "
+         "taparla. Las vallas siguen puestas, con sus luces naranjas."),
+        ("Calzada", "Autos estacionados contra el cordón, en fila, todos con "
+         "el parabrisas tapado de ceniza y ninguno chocado."),
+        ("Calzada", "Un tramo con los plátanos podados en cubo a los dos "
+         "lados. Las hojas caídas están negras y no crujen."),
+    ],
+    "avenida": [
+        ("Avenida", "Dos manos separadas por un cantero central con árboles "
+         "pelados. Es ancha, y esa anchura no tranquiliza: se ve poco y de "
+         "lejos."),
+        ("Avenida", "Cuatro carriles y una parada de colectivo con techo de "
+         "chapa. En el banco hay una campera doblada con cuidado."),
+        ("Avenida", "El cantero central tiene una hilera de faroles altos, "
+         "todos encendidos, que no llegan a iluminar las veredas."),
+    ],
+    "diagonal": [
+        ("Diagonal Sur", "La diagonal corta el damero en oblicuo y deja "
+         "esquinas en punta, veredas triangulares y ochavas que no cierran "
+         "con nada."),
+        ("Diagonal Sur", "Un tramo en pendiente suave, con las baldosas "
+         "puestas en espiga. Los edificios de los costados están cortados al "
+         "sesgo."),
+    ],
+    "puente": [
+        ("Puente", "Tablero de acero remachado sobre agua negra y quieta, con "
+         "un pretil a cada lado y faroles cada diez metros."),
+        ("Puente", "El tramo central, donde el río se ve mejor. No se oye "
+         "correr el agua."),
+    ],
+    "vereda": [
+        ("Vereda", "Baldosas flojas y ceniza acumulada contra el cordón."),
+    ],
+    "plaza": [
+        ("Plaza", "Un cuadrado de baldosas con bancos de hierro, canteros de "
+         "boj sin podar y una fuente que no corre."),
+        ("Plaza", "Juegos de plaza: dos hamacas, un tobogán y un sube y baja, "
+         "todo de caño pintado. Las hamacas se mueven."),
+        ("Plaza", "Un solado en damero con una glorieta en el medio, de "
+         "esas donde tocaba la banda municipal los domingos."),
+    ],
+    "parque": [
+        ("Parque", "Césped alto hasta la rodilla, senderos de pedregullo y "
+         "álamos en hilera. Acá la niebla se acuesta sobre el pasto."),
+        ("Parque", "Una arboleda con bancos y tachos de basura con forma de "
+         "animal. Alguien cortó el pasto de un solo cantero, hace poco."),
+        ("Parque", "El sector del lago artificial: una cuenca de cemento "
+         "vacía, con la baranda de troncos y un bote dado vuelta."),
+    ],
+    "descampado": [
+        ("Baldío", "Terreno vacío entre construcciones: pasto quemado, "
+         "escombros y un cerco de alambre caído."),
+        ("Baldío", "Una obra parada. Los cimientos llenos de agua, el "
+         "encofrado gris y una grúa fija que no gira."),
+        ("Playón", "Cemento marcado con líneas amarillas descoloridas y unos "
+         "pocos autos estacionados, prolijos, cubiertos de ceniza."),
+    ],
+    "casa": [
+        ("Casa", "Una vivienda de dos plantas con el porche hundido y las "
+         "cortinas corridas. La puerta del frente está abierta lo justo."),
+        ("Casa", "Un chalet con jardín al frente, cerco vivo y un triciclo "
+         "volcado en el camino de lajas."),
+        ("Casa", "Casa chorizo de patio largo, con las macetas alineadas "
+         "contra la pared y la ropa todavía tendida."),
+        ("Casa", "Un PH de dos plantas con la escalera por afuera y cuatro "
+         "medidores de luz en la entrada. Tres giran."),
+    ],
+    "edificio": [
+        ("Edificio de departamentos", "Ocho pisos de ladrillo con balcones "
+         "franceses y macetas muertas. El portero eléctrico tiene veinte "
+         "timbres y ninguno anda."),
+        ("Edificio de departamentos", "Un bloque de vivienda social, cuatro "
+         "cuerpos alrededor de un patio interno con tendederos."),
+        ("Edificio de oficinas", "Vidrio espejado del piso al techo, con el "
+         "hall vacío y los molinetes de acceso destrabados."),
+    ],
+    "comercio": [
+        ("Local a la calle", "Un negocio chico con la persiana a medio bajar "
+         "y la vidriera empañada por dentro."),
+        ("Almacén", "Góndolas hasta el techo y una heladera de bebidas que "
+         "zumba. La caja registradora está abierta y llena."),
+        ("Bar", "Doce mesas, barra de estaño y taburetes altos. En una mesa "
+         "quedaron dos vasos servidos y sin tocar."),
+        ("Farmacia", "Mostrador de vidrio, cajones numerados y la cruz verde "
+         "de la puerta parpadeando."),
+        ("Ferretería", "Todo colgado de ganchos y ordenado por tamaño, del "
+         "clavo más chico a la maza."),
+    ],
+    "mercado": [
+        ("Mercado Central — puestos", "Puestos de chapa y madera bajo la nave "
+         "de hierro, cada uno con su toldo a rayas y su balanza."),
+    ],
+    "industria": [
+        ("Galpón", "Chapa acanalada, portón corredizo y un muelle de carga a "
+         "la altura de un camión. Huele a aceite quemado."),
+        ("Depósito", "Estanterías industriales de tres alturas con pallets "
+         "envueltos en film. Un autoelevador quedó cargado a mitad de camino."),
+        ("Taller", "Fosa abierta en el piso, un elevador hidráulico a media "
+         "altura sosteniendo nada, y las herramientas ordenadas por tamaño."),
+    ],
+    "iglesia": [
+        ("Iglesia de barrio", "Nave única, doce bancos y un campanario corto. "
+         "El vitral, desde adentro, se ve negro."),
+    ],
+    "hospital": [
+        ("Hospital Municipal — predio", "Terreno del hospital: reja de "
+         "lanzas, cantero de boj sin podar y carteles de circulación interna."),
+    ],
+    "comisaria": [
+        ("Comisaría", "Ladrillo visto, dos escalones de granito y un farol "
+         "azul sobre la puerta. El farol está prendido."),
+    ],
+    "bomberos": [
+        ("Destacamento de bomberos", "Portón levantado, dársena vacía y los "
+         "trajes de fuego colgados del techo por el casco."),
+    ],
+    "escuela": [
+        ("Escuela", "Paredón de ladrillo de tres metros rematado con reja de "
+         "puntas, y adentro un patio con el mástil sin bandera."),
+        ("Escuela — aulas", "Aulas con los pupitres y las sillas levantadas "
+         "sobre las mesas, como al final del día."),
+    ],
+    "biblioteca": [
+        ("Biblioteca — depósito", "Estanterías compactas sobre rieles, con "
+         "manivela. Huele a papel húmedo."),
+    ],
+    "municipalidad": [
+        ("Municipalidad — oficinas", "Mostradores numerados, sillas de espera "
+         "y un cartel de turnos parado en un número que no avanza."),
+    ],
+    "hotel": [
+        ("Hotel", "Lobby con alfombra de guardas, sillones de cuero y un "
+         "casillero de correspondencia con un sobre en cada casilla."),
+    ],
+    "cementerio": [
+        ("Cementerio", "Lápidas en hileras, cipreses podados y senderos de "
+         "grava que crujen más fuerte de lo que deberían."),
+        ("Cementerio — panteones", "Bóvedas familiares de mármol con puertas "
+         "de bronce y vidrios biselados. Algunas están abiertas."),
+    ],
+    "estacion_tren": [
+        ("Estación — andenes", "Marquesina de chapa, bancos atornillados y "
+         "vías que se pierden en la niebla a los treinta metros."),
+        ("Estación — playa de maniobras", "Vías muertas, un vagón de carga "
+         "abierto y un cambio de agujas trabado."),
+    ],
+    "muelle": [
+        ("Muelle", "Tablones hinchados de humedad sobre el agua, con bitas de "
+         "hierro y neumáticos colgando como defensas."),
+    ],
+    "faro": [
+        ("Punta del faro", "Una punta de piedra que entra en el lago, con la "
+         "torre blanca y roja girando su linterna."),
+    ],
+    "atraccion": [
+        ("Calesita", "Plataforma circular bajo una carpa de rayas, con "
+         "caballos de madera empalados en barras de bronce. Gira."),
+    ],
+    "alcantarilla": [
+        ("Boca de tormenta", "Una tapa de hierro fundido corrida a un "
+         "costado, con el escudo de la ciudad en relieve."),
+    ],
+    "interior": [("Sala", "Un ambiente cerrado, sin ventanas a la calle.")],
+    "sala": [("Sala", "Un ambiente cerrado, sin ventanas a la calle.")],
+    "pasillo": [
+        ("Pasillo", "Piso encerado y la mitad de los tubos fluorescentes "
+         "apagados."),
+    ],
+    "escalera": [
+        ("Escalera", "Hormigón sin revestir, pasamanos de caño y una lámpara "
+         "enjaulada en cada descanso."),
+    ],
+    "sotano": [
+        ("Subsuelo", "Caños forrados, piso de rejilla y aire varios grados "
+         "más frío."),
+    ],
+    "azotea": [
+        ("Azotea", "Membrana asfáltica, maquinaria de ventilación y un "
+         "parapeto bajo. Desde acá la niebla se ve desde arriba."),
+    ],
 }
 
 # Tipos de relleno que son de exterior: les corresponde el párrafo de niebla.
 RELLENO_EXTERIOR = frozenset(
     (
-        "calle",
-        "cruce",
-        "avenida",
-        "vereda",
-        "callejon",
-        "descampado",
-        "puente",
-        "muelle",
-        "azotea",
-        "atraccion",
-        "iglesia",
-        "hospital",
-        "comisaria",
-        "hotel",
-        "faro",
-        "estacionamiento",
+        "calle", "avenida", "diagonal", "puente", "vereda", "plaza", "parque",
+        "descampado", "cementerio", "muelle", "faro", "atraccion", "azotea",
+        "estacion_tren", "alcantarilla", "hospital", "escuela",
     )
 )
 
@@ -524,19 +473,9 @@ RELLENO_EXTERIOR = frozenset(
 
 
 def celdas_de(plano, z):
-    """
-    Convierte el dibujo de un nivel en un diccionario `{(x, y): tipo}`.
-
-    Args:
-        plano (str): clave del plano.
-        z (int): nivel.
-
-    Returns:
-        dict: tipo de cada celda, incluidas las intransitables.
-
-    """
+    """Convierte el dibujo de un nivel en un diccionario `{(x, y): tipo}`."""
     dibujo = PLANOS[plano]["niveles"][z]
-    filas = [f for f in dibujo.strip("\n").splitlines()]
+    filas = dibujo.strip("\n").splitlines()
     alto = len(filas)
     celdas = {}
     for indice, fila in enumerate(filas):
@@ -562,3 +501,18 @@ def todas_las_celdas():
             for (x, y), tipo in celdas_de(plano, z).items():
                 todo[(plano, x, y, z)] = tipo
     return todo
+
+
+def nombre_de_calle(x, y):
+    """
+    Cómo se llama el tramo de calle en esa celda.
+
+    En una esquina se nombran las dos calles que se cruzan, que es como se
+    ubica la gente en una ciudad de damero.
+
+    """
+    eo = CALLES["eo"].get(y)
+    ns = CALLES["ns"].get(x)
+    if eo and ns:
+        return f"{eo} y {ns}"
+    return eo or ns or None

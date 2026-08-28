@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Construye (y reconstruye) el mundo desde `silent_hill.py` y `ubicaciones.py`.
+Construye (y reconstruye) Nébrida desde `nebrida.py` y `ubicaciones.py`.
 
 Uso desde el juego, como superusuario::
 
-    batchcode batch.silent_hill
+    batchcode batch.nebrida
 
 Uso desde la línea de comandos::
 
@@ -20,7 +20,8 @@ Cómo se arma el mundo:
 1. `ubicaciones.py` dibuja cada plano como una imagen de texto, un carácter por
    celda. Toda celda transitable es una sala.
 2. Las celdas que reclama `NOMBRADAS` usan el nombre y la descripción escritos
-   en `silent_hill.py`. Las demás se llenan con salas genéricas según su tipo,
+   en `nebrida.py`. Las demás se llenan con salas genéricas según su tipo y,
+   si son calle, con el nombre de la calle,
    para que la grilla quede densa sin escribir doscientas descripciones.
 3. Cada sala se conecta automáticamente con sus vecinas ortogonales. Las
    salidas declaradas a mano en `CONEXIONES` tienen prioridad: la conexión
@@ -38,10 +39,10 @@ from evennia.objects.objects import DefaultExit, DefaultRoom
 from evennia.utils import create, search
 
 from world.mapa import iconos
-from world.mapa import silent_hill as datos
+from world.mapa import nebrida as datos
 from world.mapa import ubicaciones
 
-TAG_MAPA = "silent_hill"
+TAG_MAPA = "nebrida"
 TAG_CATEGORIA = "mapa"
 
 SALAS_EJEMPLO = ("Limbo",)
@@ -215,10 +216,50 @@ def _escribir_generado(sala_inicio):
         fh.write("\n".join(lineas))
 
 
-def _crear_sala(key, desc, tipo, plano=None, pos=None):
+def _vecinos_trama(celdas, plano, x, y, z):
+    """
+    Por cuáles de los cuatro lados sigue la trama de calles.
+
+    Es lo que decide con qué carácter se dibuja el tramo: una calle que sigue
+    al norte y al este es una esquina `└`, la que sigue en las cuatro
+    direcciones es un cruce `┼`. No se declara en los datos porque se deduce
+    sin ambigüedad del dibujo, y un dato que se puede deducir es un dato que se
+    puede contradecir.
+
+    Returns:
+        tuple: `(norte, sur, este, oeste)` con 1 donde sigue la trama.
+
+    """
+    return tuple(
+        1 if celdas.get((plano, x + dx, y + dy, z)) in iconos.TRAMA else 0
+        for dx, dy in ((0, 1), (0, -1), (1, 0), (-1, 0))
+    )
+
+
+def _relleno_para(tipo, plano, x, y, z):
+    """
+    Nombre y descripción de una sala que nadie reclamó.
+
+    Las calles se llaman como la calle: es lo que hace que caminar por Nébrida
+    se sienta como caminar por una ciudad y no por una grilla. El resto elige
+    una de las variantes de su tipo, siempre la misma para la misma celda.
+
+    """
+    variantes = ubicaciones.RELLENO[tipo]
+    nombre, desc = variantes[(x * 7 + y * 13 + z) % len(variantes)]
+    if tipo in iconos.TRAMA and plano == "nebrida":
+        calle = ubicaciones.nombre_de_calle(x, y)
+        if calle:
+            nombre = calle
+    return nombre, desc
+
+
+def _crear_sala(key, desc, tipo, plano=None, pos=None, vecinos=None):
     """Crea una sala del mapa con sus atributos de grilla."""
     atributos = [("desc", desc), ("tipo_mapa", tipo)]
     etiquetas = [(TAG_MAPA, TAG_CATEGORIA), (tipo, "tipo_mapa")]
+    if vecinos:
+        atributos.append(("vecinos_trama", vecinos))
     if plano is not None:
         atributos += [("plano", plano), ("pos", pos)]
         etiquetas.append((plano, "plano"))
@@ -275,20 +316,27 @@ def construir(caller=None, borrar_ejemplos=True):
         if tipo in iconos.INTRANSITABLES:
             continue
         plano, x, y, z = pos
+        vecinos = (
+            _vecinos_trama(celdas, plano, x, y, z)
+            if tipo in iconos.TRAMA
+            else None
+        )
         clave = nombrada_en.get(pos)
         if clave:
             spec = datos.SALAS[clave]
             desc = spec["desc"]
             if spec.get("exterior"):
                 desc = datos.NIEBLA + desc
-            sala = _crear_sala(spec["nombre"], desc, tipo, plano, (x, y, z))
+            sala = _crear_sala(
+                spec["nombre"], desc, tipo, plano, (x, y, z), vecinos
+            )
             salas[clave] = sala
             escritas += 1
         else:
-            nombre, desc = ubicaciones.RELLENO[tipo]
+            nombre, desc = _relleno_para(tipo, plano, x, y, z)
             if tipo in ubicaciones.RELLENO_EXTERIOR:
                 desc = datos.NIEBLA + desc
-            sala = _crear_sala(nombre, desc, tipo, plano, (x, y, z))
+            sala = _crear_sala(nombre, desc, tipo, plano, (x, y, z), vecinos)
             relleno += 1
         por_celda[pos] = sala
 

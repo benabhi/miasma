@@ -158,7 +158,7 @@ IN_GAME_ERRORS = True
 try:
     from server.conf.mapa_generado import *
 except ImportError:
-    print("mapa_generado.py no encontrado: corré `batchcode batch.silent_hill`.")
+    print("mapa_generado.py no encontrado: corré `batchcode batch.nebrida`.")
 
 ######################################################################
 # secret_settings.py sobrescribe todo lo de arriba (y está en .gitignore)

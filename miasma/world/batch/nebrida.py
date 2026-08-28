@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 """
-Batchcode: construye el mapa de pruebas de Silent Hill.
+Batchcode: construye la ciudad de Nébrida.
 
 Desde el juego, como superusuario::
 
-    batchcode batch.silent_hill
+    batchcode batch.nebrida
 
 (El prefijo `world.` no va: `BASE_BATCHPROCESS_PATHS` ya incluye "world".)
 
