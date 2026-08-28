@@ -124,6 +124,21 @@
 
 #map read {$miasma[mapa]}
 
+#nop  La bandera static es lo que impide que el mapa se dibuje solo:
+#nop  sin ella cada paso inventa una sala nueva hacia donde fuiste.
+#nop  vtmap lo pinta en la franja de arriba, y symbolgraphics usa el
+#nop  símbolo de cada sala -los mismos que el minimapa del juego- en
+#nop  vez de las líneas de conexión de TinTin++.
+#map flag static on
+#map flag vtmap on
+#map flag symbolgraphics on
+#map flag asciigraphics off
+
+#nop  Dónde estás parado. TinTin++ lo marca con una estrella, que entre
+#nop  2140 salas se pierde, así que va negro sobre amarillo: el mismo
+#nop  par que usa el minimapa del juego para el @.
+#map color {USER} {<F000><BFF0>}
+
 #nop  Leer el archivo no alcanza: hasta que el mapa no tiene una sala
 #nop  actual no dibuja nada y el recuadro de arriba queda en blanco. El
 #nop  goto lo para en la sala 1, que es la Plaza Mayor, donde empieza
@@ -186,16 +201,23 @@
 #nop  por eso cada línea traduce.
 #nop ============================================================
 
-#alias {norte}     {#map move n;#send {norte}}
-#alias {sur}       {#map move s;#send {sur}}
-#alias {este}      {#map move e;#send {este}}
-#alias {oeste}     {#map move w;#send {oeste}}
-#alias {noreste}   {#map move ne;#send {noreste}}
-#alias {noroeste}  {#map move nw;#send {noroeste}}
-#alias {sureste}   {#map move se;#send {sureste}}
-#alias {suroeste}  {#map move sw;#send {suroeste}}
-#alias {arriba}    {#map move u;#send {arriba}}
-#alias {abajo}     {#map move d;#send {abajo}}
+#alias {norte}     {#map move n;#map update;#send {norte}}
+#alias {sur}       {#map move s;#map update;#send {sur}}
+#alias {este}      {#map move e;#map update;#send {este}}
+#alias {oeste}     {#map move w;#map update;#send {oeste}}
+#alias {noreste}   {#map move ne;#map update;#send {noreste}}
+#alias {noroeste}  {#map move nw;#map update;#send {noroeste}}
+#alias {sureste}   {#map move se;#map update;#send {sureste}}
+#alias {suroeste}  {#map move sw;#map update;#send {suroeste}}
+#alias {arriba}    {#map move u;#map update;#send {arriba}}
+#alias {abajo}     {#map move d;#map update;#send {abajo}}
+
+#nop  El #map move corre antes de que el juego conteste, así que un
+#nop  paso contra una pared igual mueve el mapa. No se puede esperar la
+#nop  respuesta -el alias tiene que mandar el comando ya-, así que lo
+#nop  devolvemos cuando el juego lo rechaza.
+
+#action {^No hay salida hacia} {#map undo;#map update}
 
 #nop --- las abreviaturas del juego ----------------------------
 
@@ -231,6 +253,8 @@
 #nop  por \e.
 #nop ============================================================
 
+#nop  --- teclado en modo aplicación (Linux, WSL, xterm) ---
+
 #macro {\eOw} {noroeste}
 #macro {\eOx} {norte}
 #macro {\eOy} {noreste}
@@ -242,6 +266,32 @@
 #macro {\eOs} {sureste}
 #macro {\eOp} {mapa}
 #macro {\eOn} {entrar}
+
+#nop  --- el numpad de Windows (WinTin++) ---
+#nop
+#nop  Con Bloq Num apagado, la consola de Windows no manda las
+#nop  secuencias de arriba: manda las de las teclas de edición. El 8 es
+#nop  Flecha arriba, el 7 es Inicio, el 9 es RePág, el 0 es Insert.
+#nop
+#nop  Por eso atar estas secuencias es lo que hace andar el numpad en
+#nop  Windows, y no un agregado aparte. |yLa contra:|n son las mismas
+#nop  teclas que las flechas y Inicio/Fin del teclado grande, así que
+#nop  esas dejan de servir para el historial y para editar la línea.
+
+#macro {\e[A} {norte}
+#macro {\e[B} {sur}
+#macro {\e[C} {este}
+#macro {\e[D} {oeste}
+#macro {\e[1~} {noroeste}
+#macro {\e[H}  {noroeste}
+#macro {\e[5~} {noreste}
+#macro {\e[4~} {suroeste}
+#macro {\e[F}  {suroeste}
+#macro {\e[6~} {sureste}
+#macro {\e[2~} {mapa}
+#macro {\e[3~} {entrar}
+#macro {\e[E}  {mirar}
+#macro {\e[G}  {mirar}
 
 #nop --- con Bloq Num encendido: los dígitos, y Enter -----------
 
