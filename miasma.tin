@@ -31,7 +31,7 @@
 #nop  Si preferís arrancarlo desde otro lado, poné acá la ruta completa
 #nop  (por ejemplo /home/tu-usuario/mud/miasma/nebrida.map).
 
-#variable {miasma[mapa]} {./miasma/nebrida.map}
+#variable {miasma[mapa]} {miasma/nebrida.map}
 
 
 #nop ============================================================
@@ -112,9 +112,21 @@
 #nop  porqué casi siempre es el mismo: arrancaste el cliente desde
 #nop  otro directorio.
 
-#script {miasma[existe]} {ls -1 $miasma[mapa] 2>/dev/null}
+#nop  El #map read va primero y siempre. El chequeo de abajo es solo
+#nop  para explicar el error si falla: si lo pusiéramos antes, en un
+#nop  TinTin++ que no puede correr comandos del sistema -el port de
+#nop  Windows, por ejemplo- el chequeo daría vacío, lo tomaríamos por
+#nop  archivo faltante y no intentaríamos leerlo nunca.
 
-#if {"$miasma[existe]" == ""}
+#map read {$miasma[mapa]}
+
+#nop  #script devuelve una lista, no un texto, así que hay que mirar
+#nop  el primer elemento. El "echo FIN" del final es lo que distingue
+#nop  "el archivo no está" -queda FIN solo- de "no pude fijarme" -la
+#nop  variable ni se crea y el elemento sale vacío-.
+#script {chequeo_mapa} {ls -1 $miasma[mapa] 2>/dev/null; echo FIN}
+
+#if {"$chequeo_mapa[1]" == "FIN"}
 {
     #echo {<118>};
     #echo {<118>  No encontré el mapa de la ciudad en esta ruta:<088>};
@@ -128,23 +140,6 @@
     #echo {<128>  arriba de todo en miasma.tin.<088>};
     #echo {<118>}
 }
-{
-    #map read {$miasma[mapa]}
-}
-
-#nop  La bandera 'static' es lo que hace que el mapa no se dibuje solo. Sin esta
-#nop  bandera, cada `#map move` inventa una sala nueva hacia donde
-#nop  fuiste —incluso cuando el juego no te dejó pasar— y el mapa se
-#nop  llena de habitaciones que no existen. Con el mapa ya cargado no
-#nop  hay nada que descubrir: solo hay que seguir al personaje.
-#map flag static on
-#map flag vtmap on
-
-#nop  Con symbolgraphics el mapa se dibuja con los símbolos de cada sala
-#nop  -los mismos que usa el minimapa del juego- en vez de con las líneas
-#nop  de conexión de TinTin++. Apagalo si preferís ver los enlaces.
-#map flag symbolgraphics on
-#map flag asciigraphics off
 
 #nop --- guardar y recuperar lo explorado -----------------------
 
