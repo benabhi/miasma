@@ -60,11 +60,31 @@ DIRECCIONES = {
 BANDERAS = 1 | 2
 
 
+# Evennia escribe el color como |rgb con cada canal de 0 a 5 -el cubo de 216
+# colores de xterm256-. TinTin++ lo escribe como <Frgb> con cada canal en un
+# dígito hexadecimal, de 0 a F, y lo emite como color verdadero.
+#
+# La tabla lleva cada nivel de Evennia al dígito que más se le parece. Los
+# niveles del cubo no están repartidos parejo -son 0, 95, 135, 175, 215 y 255-,
+# así que dividir por 17 y redondear da 0, 6, 8, A, D, F y no una escala lineal.
+NIVELES = "068ADF"
+
+
 def _color_tintin(tipo):
-    """Traduce el color de un tipo de celda al formato de TinTin++."""
+    """Traduce el color de un tipo de celda al formato de TinTin++.
+
+    |yOjo con la forma de tres dígitos.|n `<025>` existe en TinTin++ pero
+    significa otra cosa: estilo 0, frente 2, fondo 5. Escribir ahí los dígitos
+    de Evennia tal cual pinta fondos macizos y el mapa se vuelve ilegible.
+
+    """
     color = iconos.COLORES.get(tipo, "")
-    # Evennia escribe |025 y TinTin++ <025>: los dígitos son los mismos.
-    return f"<{color[1:]}>" if color.startswith("|") and len(color) == 4 else ""
+    if len(color) != 4 or not color.startswith("|") or not color[1:].isdigit():
+        return ""
+    canales = [int(c) for c in color[1:]]
+    if max(canales) > 5:
+        return ""
+    return "<F%s>" % "".join(NIVELES[c] for c in canales)
 
 
 def _simbolo(sala):

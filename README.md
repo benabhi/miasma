@@ -106,7 +106,8 @@ docker compose exec game evennia shell -c "from world.mapa.exportar_tintin impor
 ```
 
 Otros atajos: `ira <lugar>` camina solo hasta un lugar del mapa,
-`mapadeshacer` si el cursor se desincroniza, `mapacargar` lo recarga, `clear`
+`mapaubicar <sala>` reubica el cursor si entraste lejos de la Plaza Mayor,
+`mapadeshacer` deshace el último paso, `mapacargar` recarga el mapa, `clear`
 limpia la pantalla.
 
 ---

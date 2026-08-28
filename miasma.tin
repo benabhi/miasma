@@ -60,12 +60,16 @@
 #nop  El primero es el tamaño de la franja de arriba, que es donde el
 #nop  mapa se dibuja. Con los números al revés el mapa termina abajo.
 #nop
+#nop  El segundo número es la franja de abajo. Con 2 queda un
+#nop  recuadro vacío entre el juego y la línea donde escribís; con 1
+#nop  se dibuja solo el del mapa.
+#nop
 #nop  Arriba el mapa, abajo la línea de entrada, y el juego corre en
 #nop  el medio. Si tu terminal es corta, bajá el 16: con 24 filas de
 #nop  alto conviene 10, o el texto no entra.
 #nop ============================================================
 
-#split 16 2
+#split 16 1
 
 
 #nop ============================================================
@@ -120,6 +124,17 @@
 
 #map read {$miasma[mapa]}
 
+#nop  Leer el archivo no alcanza: hasta que el mapa no tiene una sala
+#nop  actual no dibuja nada y el recuadro de arriba queda en blanco. El
+#nop  goto lo para en la sala 1, que es la Plaza Mayor, donde empieza
+#nop  el juego.
+#nop
+#nop  Si entrás y aparecés en otro lado -porque te desconectaste lejos-
+#nop  el cursor del mapa va a estar corrido hasta que lo reubiques con
+#nop  `mapaubicar <sala>`.
+#map goto 1
+#map update
+
 #nop  #script devuelve una lista, no un texto, así que hay que mirar
 #nop  el primer elemento. El "echo FIN" del final es lo que distingue
 #nop  "el archivo no está" -queda FIN solo- de "no pude fijarme" -la
@@ -143,7 +158,10 @@
 
 #nop --- guardar y recuperar lo explorado -----------------------
 
-#alias {mapacargar} {#map read {$miasma[mapa]};#map flag static on;#echo {<128>mapa de Nébrida recargado<088>}}
+#alias {mapacargar} {#map read {$miasma[mapa]};#map flag static on;#map goto 1;#map update;#echo {<128>mapa de Nébrida recargado<088>}}
+
+#nop  Reubicar el cursor del mapa: `mapaubicar Plaza Mayor`
+#alias {mapaubicar} {#map goto {%1};#map update}
 
 #nop  Si el mapa se desincroniza —pasa cuando un movimiento falla y
 #nop  TinTin cree que igual te moviste— con esto se vuelve un paso
@@ -264,4 +282,4 @@
 #echo {<118>  M I A S M A<088>}
 #echo {<088>  Nébrida. El aire está enfermo.<088>}
 #echo {<128>  numérico: 8 norte · 2 sur · 4 oeste · 6 este · 5 mirar · 0 mapa<088>}
-#echo {<128>  ira <lugar> · mapacargar · mapadeshacer · clear<088>}
+#echo {<128>  ira <lugar> · mapaubicar <sala> · mapacargar · clear<088>}
