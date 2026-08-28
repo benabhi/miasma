@@ -89,9 +89,18 @@ El numérico manda esas secuencias con **Bloq Num apagado**. Con Bloq Num
 encendido escribe dígitos, y para ese caso están los alias `8`, `2`, `4`… que
 hacen lo mismo apretando Enter.
 
-Otros atajos: `mapaguardar` / `mapacargar` para conservar lo explorado,
-`ira <lugar>` para que camine solo hasta un lugar ya visitado, `mapadeshacer`
-si el mapa se desincroniza, `clear` para limpiar la pantalla.
+**La ciudad viene dibujada.** `miasma/nebrida.map` se genera desde el mundo
+del juego y el cliente lo carga al conectarse, así que el mapa está completo
+desde el primer minuto y no se dibuja solo mientras caminás. Para regenerarlo
+tras cambiar el mundo:
+
+```bash
+docker compose exec game evennia shell -c "from world.mapa.exportar_tintin import exportar; exportar()"
+```
+
+Otros atajos: `ira <lugar>` camina solo hasta un lugar del mapa,
+`mapadeshacer` si el cursor se desincroniza, `mapacargar` lo recarga, `clear`
+limpia la pantalla.
 
 ---
 

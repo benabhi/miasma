@@ -86,29 +86,28 @@
 #nop  {SESSION CONNECTED} no sirve, porque el evento se registraría
 #nop  después de que la sesión ya se abrió y no dispararía nunca.
 
-#map create 65536
+#nop  Nébrida viene dibujada de fábrica: `nebrida.map` se genera desde
+#nop  el mundo del juego con
+#nop
+#nop      docker compose exec game evennia shell -c #nop        "from world.mapa.exportar_tintin import exportar; exportar()"
+#nop
+#nop  así que no hay que caminar la ciudad entera para tenerla.
+
+#map create 4096
+#map read miasma/nebrida.map
+
+#nop  |wstatic|n es lo que hace que el mapa no se dibuje solo. Sin esta
+#nop  bandera, cada `#map move` inventa una sala nueva hacia donde
+#nop  fuiste —incluso cuando el juego no te dejó pasar— y el mapa se
+#nop  llena de habitaciones que no existen. Con el mapa ya cargado no
+#nop  hay nada que descubrir: solo hay que seguir al personaje.
+#map flag static on
 #map flag vtmap on
 #map flag asciigraphics off
 
-#nop  Nébrida todavía no viene predibujada: el mapa se arma solo a
-#nop  medida que caminás. Con `mapaguardar` queda en miasma.map y con
-#nop  `mapacargar` vuelve, así que se explora una vez y listo.
-#nop
-#nop  Para que venga hecha de fábrica habría que generar el .map desde
-#nop  el mundo del juego, y para eso hace falta saber el formato que
-#nop  escribe TinTin++. Se saca en dos minutos: conectate, hacé
-#nop
-#nop      #map create 100
-#nop      #map name {Prueba}
-#nop      #map move n
-#nop      #map write /tmp/prueba.map
-#nop
-#nop  y pasame el contenido de ese archivo.
-
 #nop --- guardar y recuperar lo explorado -----------------------
 
-#alias {mapaguardar} {#map write miasma.map;#echo {<128>mapa guardado en miasma.map<088>}}
-#alias {mapacargar}  {#map read  miasma.map;#echo {<128>mapa cargado<088>}}
+#alias {mapacargar} {#map read miasma/nebrida.map;#map flag static on;#echo {<128>mapa de Nébrida recargado<088>}}
 
 #nop  Si el mapa se desincroniza —pasa cuando un movimiento falla y
 #nop  TinTin cree que igual te moviste— con esto se vuelve un paso
@@ -236,4 +235,4 @@
 #echo {<118>  M I A S M A|n <088>}
 #echo {<088>  Nébrida. El aire está enfermo.<088>}
 #echo {<128>  numérico: 8 norte · 2 sur · 4 oeste · 6 este · 5 mirar · 0 mapa<088>}
-#echo {<128>  mapaguardar / mapacargar / mapadeshacer · ira <lugar><088>}
+#echo {<128>  ira <lugar> · mapacargar · mapadeshacer · clear<088>}
