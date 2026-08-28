@@ -21,6 +21,18 @@
 #variable {miasma[servidor]} {localhost}
 #variable {miasma[puerto]}   {4000}
 
+#nop  Dónde está el mapa de la ciudad. La ruta es relativa al directorio
+#nop  desde el que arrancás TinTin++, no a este archivo, así que sirve
+#nop  tal cual si lo levantás parado en la raíz del repo:
+#nop
+#nop      cd /ruta/al/repo
+#nop      tt++ miasma.tin
+#nop
+#nop  Si preferís arrancarlo desde otro lado, poné acá la ruta completa
+#nop  (por ejemplo /home/tu-usuario/mud/miasma/nebrida.map).
+
+#variable {miasma[mapa]} {miasma/nebrida.map}
+
 
 #nop ============================================================
 #nop  Terminal
@@ -73,9 +85,9 @@
 #nop  El mapa
 #nop
 #nop  Este es el mapa de TinTin++, que no es el minimapa del juego.
-#nop  El del juego muestra lo que tenés alrededor ahora; este se va
-#nop  dibujando solo a medida que caminás y se acuerda de toda la
-#nop  ciudad, así que sirve para volver a un lugar donde estuviste.
+#nop  El del juego muestra lo que tenés alrededor ahora. Este otro
+#nop  tiene la ciudad entera y te marca dónde estás parado, así que
+#nop  sirve para ubicarte y para volver a un lugar.
 #nop
 #nop  vtmap lo dibuja en la parte de arriba de la pantalla y lo
 #nop  centra en vos en cada paso.
@@ -89,25 +101,30 @@
 #nop  Nébrida viene dibujada de fábrica: `nebrida.map` se genera desde
 #nop  el mundo del juego con
 #nop
-#nop      docker compose exec game evennia shell -c #nop        "from world.mapa.exportar_tintin import exportar; exportar()"
+#nop      docker compose exec game evennia shell -c \n#nop        "from world.mapa.exportar_tintin import exportar"      \n#nop        "exportar()"
 #nop
 #nop  así que no hay que caminar la ciudad entera para tenerla.
 
 #map create 4096
-#map read miasma/nebrida.map
+#map read {$miasma[mapa]}
 
-#nop  |wstatic|n es lo que hace que el mapa no se dibuje solo. Sin esta
+#nop  La bandera 'static' es lo que hace que el mapa no se dibuje solo. Sin esta
 #nop  bandera, cada `#map move` inventa una sala nueva hacia donde
 #nop  fuiste —incluso cuando el juego no te dejó pasar— y el mapa se
 #nop  llena de habitaciones que no existen. Con el mapa ya cargado no
 #nop  hay nada que descubrir: solo hay que seguir al personaje.
 #map flag static on
 #map flag vtmap on
+
+#nop  Con symbolgraphics el mapa se dibuja con los símbolos de cada sala
+#nop  -los mismos que usa el minimapa del juego- en vez de con las líneas
+#nop  de conexión de TinTin++. Apagalo si preferís ver los enlaces.
+#map flag symbolgraphics on
 #map flag asciigraphics off
 
 #nop --- guardar y recuperar lo explorado -----------------------
 
-#alias {mapacargar} {#map read miasma/nebrida.map;#map flag static on;#echo {<128>mapa de Nébrida recargado<088>}}
+#alias {mapacargar} {#map read {$miasma[mapa]};#map flag static on;#echo {<128>mapa de Nébrida recargado<088>}}
 
 #nop  Si el mapa se desincroniza —pasa cuando un movimiento falla y
 #nop  TinTin cree que igual te moviste— con esto se vuelve un paso
@@ -127,9 +144,9 @@
 #nop  vamos y manda el comando al juego. El `#send` evita que el
 #nop  alias se llame a sí mismo.
 #nop
-#nop  Las direcciones del juego están en español; las del mapa de
-#nop  TinTin++ son las inglesas de una letra (n, s, e, w, ne...).
-#nop  Por eso cada línea traduce.
+#nop  Las direcciones del juego están en español. Las del mapa de
+#nop  TinTin++ son las inglesas de una letra (n, s, e, w, ne...),
+#nop  por eso cada línea traduce.
 #nop ============================================================
 
 #alias {norte}     {#map move n;#send {norte}}
@@ -165,10 +182,10 @@
 #nop      1 2 3      suroeste  sur    sureste
 #nop      0 .          mapa    entrar
 #nop
-#nop  |yEsto necesita el numérico en modo aplicación|n, que es como
-#nop  queda con |wBloq Num apagado|n en la mayoría de las terminales.
+#nop  Esto necesita el numérico en modo aplicación, que es como
+#nop  queda con Bloq Num apagado en la mayoría de las terminales.
 #nop  Con Bloq Num encendido el numérico escribe dígitos en vez de
-#nop  mandar estas secuencias; para ese caso están los alias de
+#nop  mandar estas secuencias. Para ese caso están los alias de
 #nop  números de más abajo.
 #nop
 #nop  Si tu terminal manda otras secuencias, se averiguan corriendo
@@ -232,7 +249,7 @@
 #nop  Bienvenida
 #nop ============================================================
 
-#echo {<118>  M I A S M A|n <088>}
+#echo {<118>  M I A S M A<088>}
 #echo {<088>  Nébrida. El aire está enfermo.<088>}
 #echo {<128>  numérico: 8 norte · 2 sur · 4 oeste · 6 este · 5 mirar · 0 mapa<088>}
 #echo {<128>  ira <lugar> · mapacargar · mapadeshacer · clear<088>}

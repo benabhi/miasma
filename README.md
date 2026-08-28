@@ -91,8 +91,15 @@ hacen lo mismo apretando Enter.
 
 **La ciudad viene dibujada.** `miasma/nebrida.map` se genera desde el mundo
 del juego y el cliente lo carga al conectarse, así que el mapa está completo
-desde el primer minuto y no se dibuja solo mientras caminás. Para regenerarlo
-tras cambiar el mundo:
+desde el primer minuto y no se dibuja solo mientras caminás.
+
+> **Arrancá TinTin++ parado en la raíz del repo.** La ruta del mapa es relativa
+> al directorio desde el que lo levantás, no a `miasma.tin`. Si lo arrancás
+> desde otro lado vas a ver `#MAP READ: FILE {miasma/nebrida.map} NOT FOUND.`;
+> se arregla poniendo la ruta completa en la variable `miasma[mapa]`, arriba de
+> todo en `miasma.tin`.
+
+Para regenerarlo tras cambiar el mundo:
 
 ```bash
 docker compose exec game evennia shell -c "from world.mapa.exportar_tintin import exportar; exportar()"
