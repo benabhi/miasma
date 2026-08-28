@@ -23,12 +23,12 @@ CONNECTION_SCREEN = """
  Lo que respirás cambia a la gente, y no siempre en muertos.
 
  Si ya tenés cuenta:
-      |wconnect <usuario> <contraseña>|n
+      |wconectar <usuario> <contraseña>|n
  Si es tu primera vez:
-      |wcreate <usuario> <contraseña>|n
+      |wcrear <usuario> <contraseña>|n
 
  Si tu usuario tiene espacios, ponelo entre comillas.
- |whelp|n para más info. |wlook|n vuelve a mostrar esta pantalla.
+ |wayuda|n para más info. |wmirar|n vuelve a mostrar esta pantalla.
 
 |x·······················································|n
 |x Sin héroes. Sin puntos de guardado. Solo lo que puedas cargar.|n

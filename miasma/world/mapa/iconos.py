@@ -42,7 +42,7 @@ ICONOS = {
     "comercio": "$",
     "mercado": "&",
     "industria": "%",      # galpón, depósito, taller
-    "iglesia": "+",
+    "iglesia": "i",
     "hospital": "H",
     "comisaria": "P",
     "bomberos": "B",
@@ -69,8 +69,32 @@ ICONOS = {
     "muro": "█",
 }
 
-# Por acá no se camina: se dibuja, pero no es sala. El constructor no crea nada.
+# Por acá no se camina nunca: se dibuja, pero no es sala.
 INTRANSITABLES = frozenset(("agua", "arbol", "muro"))
+
+# Lo construido. Una manzana de departamentos no es un terreno por el que se
+# pasa: es un edificio, y para entrar hay que usar la puerta. De cada grupo de
+# celdas contiguas del mismo tipo, el constructor hace sala **solo la celda de
+# la puerta**, y la conecta con la calle mediante `entrar` / `salir`. El resto
+# del edificio se dibuja pero es macizo.
+CONSTRUCCIONES = frozenset(
+    (
+        "edificio",
+        "casa",
+        "comercio",
+        "mercado",
+        "industria",
+        "iglesia",
+        "hospital",
+        "comisaria",
+        "bomberos",
+        "escuela",
+        "biblioteca",
+        "municipalidad",
+        "hotel",
+        "estacion_tren",
+    )
+)
 
 ICONO_DESCONOCIDO = "?"
 ICONO_JUGADOR = "@"
@@ -131,11 +155,18 @@ DIBUJO_TRAMA = {
     "avenida": ESQUINAS_DOBLES,
 }
 
-MURO_VERTICAL = "█"
-MURO_HORIZONTAL = "█"
-MURO_ESQUINA = "█"
+# Entre celda y celda va siempre un espacio. Se probó marcar con un bloque las
+# paredes -los pares de salas contiguas sin paso- y el resultado fue un mapa
+# sembrado de manchas grises alrededor de cada puerta, que es justo donde nunca
+# hay paso lateral. El edificio ya se ve macizo porque se dibuja macizo; no
+# hace falta subrayarlo.
 PASO = " "
 MARCO = "▒"
+
+# La puerta de un edificio. Un carácter propio y no un color más claro: el
+# color se pierde en un cliente sin xterm256, y la puerta es lo único del
+# edificio con lo que se puede interactuar.
+ICONO_PUERTA = "+"
 
 # --------------------------------------------------------------------------
 # Nombres legibles, para la referencia del comando `mapa`
@@ -178,6 +209,7 @@ NOMBRES = {
     "azotea": "azotea",
     "arbol": "arboleda",
     "muro": "muro",
+    "puerta": "puerta",
 }
 
 # Con qué se muestra cada tipo en la referencia. Las calles se dibujan de once
@@ -189,6 +221,7 @@ GLIFOS_REFERENCIA = {
     "avenida": "═║╬",
     "diagonal": "/",
     "puente": "≡",
+    "puerta": "+",
 }
 
 
@@ -259,9 +292,26 @@ COLOR_POR_DEFECTO = "|w"
 COLOR_JUGADOR = "|[550|000"
 
 
-def colorear(tipo, glifo):
+def aclarar(color):
+    """
+    Sube un punto cada componente de un color xterm256.
+
+    Se usa para las puertas: la puerta es el mismo edificio, pero iluminada.
+    Marcarla con un carácter propio obligaría a inventar un glifo por cada tipo
+    de construcción; con el color alcanza y no se pierde de qué edificio es.
+
+    """
+    if len(color) == 4 and color[1:].isdigit():
+        return "|" + "".join(str(min(5, int(c) + 2)) for c in color[1:])
+    return color
+
+
+def colorear(tipo, glifo, puerta=False):
     """Envuelve un carácter del mapa en el color de su tipo."""
-    return f"{COLORES.get(tipo, COLOR_POR_DEFECTO)}{glifo}|n"
+    color = COLORES.get(tipo, COLOR_POR_DEFECTO)
+    if puerta:
+        color = aclarar(color)
+    return f"{color}{glifo}|n"
 
 
 def icono_de(tipo, vecinos=None):

@@ -33,6 +33,13 @@ from .objects import ObjectParent
 # del cliente.
 ANCHO_POR_DEFECTO = 78
 
+# La paleta del texto de sala, la misma de la pantalla de conexión: rojo
+# apagado para el nombre del lugar, gris oscuro para las etiquetas del pie. La
+# descripción va sin color, que es lo único que se lee largo.
+TITULO = "|R"          # el nombre de la sala
+ETIQUETA = "|x"        # "Salidas:", "Personajes:", "Ves:"
+LISTA = "|w"           # lo que viene después de la etiqueta
+
 # Celdas a cada lado del centro en el minimapa de `mirar`. Con 3 entra una
 # manzana entera con sus calles alrededor, que es lo mínimo para orientarse en
 # una retícula con calle cada tres celdas. Más que eso le come ancho a la
@@ -117,3 +124,37 @@ class Room(ObjectParent, DefaultRoom):
                 if ancho:
                     return min(int(ancho), 100)
         return ANCHO_POR_DEFECTO
+
+    # ----------------------------------------------------------------------
+    # El pie, en la paleta del juego
+    #
+    # Evennia los devuelve con la etiqueta en blanco fuerte, que compite con la
+    # descripción. Acá la etiqueta va en gris oscuro y la lista en blanco: se
+    # lee primero el texto y después dónde se puede ir.
+    # ----------------------------------------------------------------------
+
+    def get_display_exits(self, looker, **kwargs):
+        original = super().get_display_exits(looker, **kwargs)
+        return self._recolorear(original)
+
+    def get_display_characters(self, looker, **kwargs):
+        original = super().get_display_characters(looker, **kwargs)
+        return self._recolorear(original)
+
+    def get_display_things(self, looker, **kwargs):
+        original = super().get_display_things(looker, **kwargs)
+        return self._recolorear(original)
+
+    @staticmethod
+    def _recolorear(bloque):
+        """
+        Cambia la paleta de un bloque del pie sin rehacer cómo se arma.
+
+        Evennia devuelve `|wEtiqueta:|n lista`. Reescribir los tres métodos
+        enteros para cambiarles dos códigos de color sería copiar la lógica de
+        ordenar, agrupar y pluralizar solo para pintarla distinto.
+
+        """
+        if not bloque:
+            return bloque
+        return bloque.replace("|w", ETIQUETA, 1).replace("|n ", f"|n {LISTA}", 1) + "|n"

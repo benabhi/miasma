@@ -104,19 +104,19 @@ cccccccccccccccccccccccccccc~~~~~ccDccccccccccccccccccccccacccccccccccccccTTTTTT
 hhhcdddchhhchhhhcssschhhce~~~~~ddcDhhchheceeeceeeecsssceeeaeeeecgggcgggcgTTTTTTT
 ~~~cdddchhhchhhhcssschhpppppppdddDhhhchheceeeceeeecsssceeeaeeeeciiicgggcggTTTTTT
 ~~~~~ddchhhchhhhcdssc~~~~~eeeaddDchhhchheceeeceeeecsssceeeaeeeeciiicgggcTTTTTTTT
-~~~~~~~cccccccccccc~~~~~cccccacDccccccccccccccccccccccccccacccccccccccccccTTTTTT
-~~~~~~&&&sschhhh~~~~~dddchhhhaDhhcssschhhchhhcddddchhhceeeaggggcgggceeecsssTTTTT
+~~~~&&&cccccccccccc~~~~~cccccacDccccccccccccccccccccccccccacccccccccccccccTTTTTT
+~~~~~~~~~sschhhh~~~~~dddchhhhaDhhcssschhhchhhcddddchhhceeeaggggcgggceeecsssTTTTT
 ~~~~~~~~~~schh~~~~~hczzdchhhhDqqqcssschhhchhhcddddchhhceeeaggggcgggceeecsTTTTTTT
 ~~~~~~~~~~~~~~~~~hhhczzdchhhDaqqqcssschhhchhhcddddchhhceeeaggggcgggceeecssTTTTTT
-~~~~~~~~~~~~~ccccccccccccccDcaccccccccccccccccccccccccccccacccccccccccccTTTTTTTT
-~~~~~~~~~~~&&&ggceeecgggceDeeaeeecgggceeecgggceeeecgggceeeaeeeecgggceeecgTTTTTTT
+~~~~~~~~~~&&&ccccccccccccccDcaccccccccccccccccccccccccccccacccccccccccccTTTTTTTT
+~~~~~~~~~~~~~~ggceeecgggceDeeaeeecgggceeecgggceeeecgggceeeaeeeecgggceeecgTTTTTTT
 ~~~~~~~~~~~~~~~gceeecgggcDeeeaeeecgggceeecgggceeeecgggceeeaeeeecgggceeecgggTTTTT
-~~~~~~~~~~~~~~~~ccccccccDccccaccccccccccccccccccccccccccccacccccccccccccccTTTTTT
+~~~~~~~~~~~~~&&&ccccccccDccccaccccccccccccccccccccccccccccacccccccccccccccTTTTTT
 ~~~~~~~~~~~~~~~~~gggcssscddddassscdddcgggcssscddddcgggcsssaggggcssscdddcgTTTTTTT
-~~~~~~~~~~~~~~~&&&ggcssscddddassscdddcgggcssscddddcgggcsssaggggcssscdddcgTTTTTTT
+~~~~~~~~~~~~~~~~~~ggcssscddddassscdddcgggcssscddddcgggcsssaggggcssscdddcgTTTTTTT
 ~~~~~~~~~~~~~~~~~~~gcssscddddassscdddcgggcssscddddcgggcsssaggggcssscdddcTTTTTTTT
-~~~~~~~~~~~~~~~~~~~ccccccccccaccccccccccccccccccccccccccccacccccccccccccccTTTTTT
-~~~~~~~~~~~~~~!&&&&&cdddcggggahhhcsssceeecdddcggggcgggchhhaeeeecdddcgggcggTTTTTT
+~~~~~~~~~~~~~~!&&&&ccccccccccaccccccccccccccccccccccccccccacccccccccccccccTTTTTT
+~~~~~~~~~~~~~~~~~~~~cdddcggggahhhcsssceeecdddcggggcgggchhhaeeeecdddcgggcggTTTTTT
 ~~~~~~~~~~~~~~~~~~~~cdddcggggahhhcsssceeecdddcggggcgggchhhaeeeecdddcgggcgTTTTTTT
 """
 
@@ -238,7 +238,7 @@ NOMBRADAS = {
     "hospital_frente": ("nebrida", 46, 25, 0),
     "estacion_tren": ("nebrida", 64, 18, 0),
     "cementerio": ("nebrida", 17, 32, 0),
-    "faro": ("nebrida", 14, 1, 0),
+    "faro": ("nebrida", 14, 2, 0),
     "puente_mayor": ("nebrida", 35, 24, 0),
     "boca_alcantarilla": ("nebrida", 24, 20, 0),
     # --- Hospital Municipal ---
@@ -465,6 +465,106 @@ RELLENO_EXTERIOR = frozenset(
         "estacion_tren", "alcantarilla", "hospital", "escuela",
     )
 )
+
+
+# --------------------------------------------------------------------------
+# Las puertas
+#
+# Un edificio no es un terreno por el que se pasa. De cada grupo de celdas
+# contiguas del mismo tipo, el constructor hace sala **solo la celda de la
+# puerta** y la conecta con la calle mediante `entrar` / `salir`; el resto del
+# edificio se dibuja pero es macizo, y desde la calle no hay salida hacia él.
+#
+# Todavía no hay interiores —eso viene después—, así que la sala de la puerta
+# es el zaguán: el umbral desde donde algún día se sigue.
+# --------------------------------------------------------------------------
+
+ENTRADAS = {
+    "edificio": (
+        "Portal de un edificio",
+        "Un zaguán de baldosa calcárea con la puerta de calle trabada abierta, "
+        "el tablero de timbres a un lado y la escalera arrancando al fondo.\n\n"
+        "La escalera sube a oscuras. Todavía no hay por dónde seguir.",
+    ),
+    "casa": (
+        "Puerta de una casa",
+        "El porche de una vivienda: tres escalones, un felpudo y la puerta "
+        "entornada.\n\n"
+        "Adentro está oscuro y no se distingue nada.",
+    ),
+    "comercio": (
+        "Puerta de un local",
+        "El acceso de un negocio a la calle, con la persiana a medio bajar y el "
+        "olor a encierro que sale de adentro.\n\n"
+        "Habría que agacharse para pasar, y del otro lado no se ve.",
+    ),
+    "mercado": (
+        "Portón del mercado",
+        "Uno de los portones de hierro del mercado, con las hojas plegadas "
+        "contra la pared.\n\n"
+        "Desde el umbral se oyen las cámaras de frío, más adentro.",
+    ),
+    "industria": (
+        "Portón de un galpón",
+        "Un portón corredizo de chapa sobre riel, abierto lo justo para que "
+        "pase una persona de costado.\n\n"
+        "Adentro huele a aceite quemado y no entra luz.",
+    ),
+    "iglesia": (
+        "Atrio de una iglesia",
+        "Tres escalones de piedra y las puertas dobles de madera, cerradas pero "
+        "sin traba.\n\n"
+        "Del otro lado se filtra olor a cera.",
+    ),
+    "hospital": (
+        "Acceso del hospital",
+        "Una puerta de servicio del predio, con el cartel de circulación "
+        "interna y el timbre de guardia.\n\n"
+        "Está cerrada.",
+    ),
+    "comisaria": (
+        "Entrada de la comisaría",
+        "Dos escalones de granito y una puerta de doble hoja bajo el farol "
+        "azul.\n\n"
+        "El farol está prendido. La puerta, no tanto.",
+    ),
+    "bomberos": (
+        "Portón del cuartel",
+        "El portón de la dársena, levantado hasta la mitad, con la marca de las "
+        "ruedas todavía en el piso.\n\n"
+        "Adentro está oscuro.",
+    ),
+    "escuela": (
+        "Portón de la escuela",
+        "El portón de reja del paredón perimetral, entreabierto lo justo para "
+        "que pase una persona.\n\n"
+        "Del otro lado, el patio, y más allá el edificio cerrado.",
+    ),
+    "biblioteca": (
+        "Puerta de la biblioteca",
+        "Una puerta de roble con vidrio repartido y el horario de atención "
+        "pegado por dentro.\n\n"
+        "El horario es de un día que ya pasó.",
+    ),
+    "municipalidad": (
+        "Puerta lateral de la municipalidad",
+        "Un acceso de empleados, con lector de tarjetas y un cenicero de pie "
+        "todavía lleno.\n\n"
+        "El lector tiene la luz roja.",
+    ),
+    "hotel": (
+        "Entrada del hotel",
+        "Puerta giratoria bajo una marquesina de luces de globo, la mitad "
+        "fundidas.\n\n"
+        "La puerta gira sola, despacio.",
+    ),
+    "estacion_tren": (
+        "Acceso a los andenes",
+        "Un pasaje con molinetes destrabados y carteles de destino colgando del "
+        "techo.\n\n"
+        "Más allá no se ve.",
+    ),
+}
 
 
 # --------------------------------------------------------------------------

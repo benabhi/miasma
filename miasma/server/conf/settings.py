@@ -77,11 +77,16 @@ TIME_IGNORE_DOWNTIMES = False
 # cliente web y un cliente telnet a la vez sin desconectarse solo.
 MULTISESSION_MODE = 1
 
-# Nada de personaje automático al crear la cuenta: en Miasma pasás por creación
-# de personaje (origen, oficio, rasgos, taras). La cuenta y el sobreviviente son
-# cosas distintas, y esa distinción es la que hace que la muerte pese.
-AUTO_CREATE_CHARACTER_WITH_ACCOUNT = False
-AUTO_PUPPET_ON_LOGIN = False
+# Entrar y estar jugando, sin escalas. Al crear la cuenta se crea su personaje,
+# y al identificarse se entra directo al mundo: no hay pantalla de selección ni
+# hay que escribir `encarnar`.
+#
+# |yEsto es provisorio.|n La creación de personaje —origen, oficio, rasgos,
+# taras— es parte del modelo hardcore y vuelve cuando exista el sistema de
+# cuerpo (fase 1 de DISENO.md). Mientras no haya nada que elegir, un menú de
+# selección con un solo personaje es una puerta que se abre a un pasillo.
+AUTO_CREATE_CHARACTER_WITH_ACCOUNT = True
+AUTO_PUPPET_ON_LOGIN = True
 
 # Un sobreviviente vivo por cuenta. La permadeath la implementa el handler de
 # muerte (archivar el personaje y liberar el cupo), no este número.

@@ -83,45 +83,9 @@ def _salas_del_plano(plano, z):
     return grilla
 
 
-def _hay_paso(desde, hasta):
-    """True si se puede ir de una sala a la otra, en cualquiera de los dos sentidos."""
-    if not desde or not hasta:
-        return False
-    if any(salida.destination == hasta for salida in desde.exits):
-        return True
-    return any(salida.destination == desde for salida in hasta.exits)
-
-
-def _separacion(a, b):
-    """
-    True si entre dos celdas hay que dibujar un muro.
-
-    Solo se dibuja entre dos salas que existen y no se comunican. Si de un lado
-    no hay nada, el mapa simplemente termina ahí: el vacío ya dice que no se
-    puede seguir, y llenarlo de muros deja el mapa ilegible.
-
-    """
-    if a is None or b is None:
-        return False
-    return not _hay_paso(a, b)
-
-
 # --------------------------------------------------------------------------
 # Dibujo
 # --------------------------------------------------------------------------
-
-
-def _esquina(muro_h_izq, muro_h_der, muro_v_arr, muro_v_aba):
-    """Carácter donde se cruzan las separaciones de cuatro celdas."""
-    horizontal = muro_h_izq or muro_h_der
-    vertical = muro_v_arr or muro_v_aba
-    if horizontal and vertical:
-        return iconos.MURO_ESQUINA
-    if horizontal:
-        return iconos.MURO_HORIZONTAL
-    if vertical:
-        return iconos.MURO_VERTICAL
-    return iconos.PASO
 
 
 def dibujar(sala_actual, radio=3, enmarcar=True, recortar=True):
@@ -152,15 +116,12 @@ def dibujar(sala_actual, radio=3, enmarcar=True, recortar=True):
     if not grilla:
         return ([], set())
 
-    # El terreno intransitable —agua, arboleda, muro— no son salas, pero se
-    # dibujan igual: si se dejaran en blanco, el mapa parecería agujereado
-    # cuando en realidad ahí hay lago.
+    # Todo lo que no es sala se dibuja igual: el agua, el bosque, los muros y
+    # el cuerpo macizo de los edificios (de los que solo la puerta es sala). Si
+    # se dejaran en blanco, el mapa parecería agujereado cuando en realidad ahí
+    # hay lago, o una manzana de departamentos.
     try:
-        terreno = {
-            pos: tipo
-            for pos, tipo in ubicaciones.celdas_de(plano, cz).items()
-            if tipo in iconos.INTRANSITABLES
-        }
+        terreno = ubicaciones.celdas_de(plano, cz)
     except (KeyError, ValueError):
         terreno = {}
 
@@ -204,14 +165,6 @@ def dibujar(sala_actual, radio=3, enmarcar=True, recortar=True):
 
     tipos = set()
 
-    def muro_horizontal(x, y):
-        """True si hay muro entre (x, y) y la celda de abajo."""
-        return _separacion(grilla.get((x, y)), grilla.get((x, y - 1)))
-
-    def muro_vertical(x, y):
-        """True si hay muro entre (x, y) y la celda de la derecha."""
-        return _separacion(grilla.get((x, y)), grilla.get((x + 1, y)))
-
     lineas = []
     for y in range(y_hasta, y_desde - 1, -1):
         # --- fila de celdas ---
@@ -235,52 +188,22 @@ def dibujar(sala_actual, radio=3, enmarcar=True, recortar=True):
             else:
                 tipo = sala.db.tipo_mapa
                 tipos.add(tipo)
-                fila.append(
-                    iconos.colorear(
-                        tipo, iconos.icono_de(tipo, sala.db.vecinos_trama)
+                if sala.db.puerta_visible:
+                    # Solo los edificios de varias celdas señalan su puerta: en
+                    # uno de una sola celda, el `+` taparía de qué edificio es
+                    # para decir algo que ya se ve.
+                    tipos.add("puerta")
+                    fila.append(iconos.colorear(tipo, iconos.ICONO_PUERTA, puerta=True))
+                else:
+                    fila.append(
+                        iconos.colorear(
+                            tipo, iconos.icono_de(tipo, sala.db.vecinos_trama)
+                        )
                     )
-                )
             if x < x_hasta:
-                fila.append(
-                    iconos.colorear("muro", iconos.MURO_VERTICAL)
-                    if muro_vertical(x, y)
-                    else iconos.PASO
-                )
+                fila.append(iconos.PASO)
         lineas.append("".join(fila))
 
-        # --- fila separadora, solo si hay algún muro ---
-        if y == y_desde:
-            continue
-        separadores = [muro_horizontal(x, y) for x in range(x_desde, x_hasta + 1)]
-        if not any(separadores):
-            # Una fila separadora sin un solo muro es una línea en blanco:
-            # ocupa alto y no dice nada. Si dos filas están completamente
-            # abiertas, van pegadas y el mapa se lee como una calle.
-            #
-            # El alto del minimapa varía por esto, y está bien: lo que no
-            # puede cambiar es el ancho, que es lo que correría la columna de
-            # texto de `mirar`.
-            continue
-        sep = []
-        for i, x in enumerate(range(x_desde, x_hasta + 1)):
-            sep.append(
-                iconos.colorear("muro", iconos.MURO_HORIZONTAL)
-                if separadores[i]
-                else iconos.PASO
-            )
-            if x < x_hasta:
-                esquina = _esquina(
-                    separadores[i],
-                    separadores[i + 1],
-                    muro_vertical(x, y),
-                    muro_vertical(x, y - 1),
-                )
-                sep.append(
-                    iconos.colorear("muro", esquina)
-                    if esquina != iconos.PASO
-                    else esquina
-                )
-        lineas.append("".join(sep))
 
     if enmarcar:
         # El marco va en sombreado y no en líneas: las líneas son las calles, y

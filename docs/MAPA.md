@@ -4,7 +4,8 @@ Nébrida es una ciudad mediana de provincia sobre un lago, partida por un río,
 con su centro cívico, sus barrios, su puerto y su zona de galpones. Es el
 escenario sobre el que se prueba cada sistema nuevo a medida que se incorpora.
 
-**2452 salas, 9326 salidas, 3 planos.** El juego arranca en la Plaza Mayor.
+**1541 salas, 4512 salidas, 3 planos.** El juego arranca en la Plaza Mayor, y
+se entra directo: al identificarse ya estás jugando.
 
 El mapa es de 80×40 celdas. La retícula tiene separaciones desparejas —manzanas
 de dos, tres y cuatro celdas mezcladas— más una avenida diagonal que corta el
@@ -110,6 +111,33 @@ escrita a mano siempre le gana a la automática.
   el jugador está adentro se dibuja la calle de la que entró. Hoy está vacío:
   todo lo visitable ocupa su lugar en algún plano.
 
+### Los edificios no se atraviesan
+
+Una manzana de departamentos no es un terreno por el que se pasa. De cada grupo
+de celdas contiguas del mismo tipo, el constructor hace sala **una sola: la del
+umbral**, marcada con `+` en el mapa. Se llega a ella caminando desde la vereda
+como a cualquier otra celda; el cuerpo del edificio se dibuja pero no es sala, y
+desde la calle no hay salida hacia él.
+
+Cada umbral se lleva su propio tramo de vereda: si dos edificios compartieran la
+celda de entrada, el segundo quedaría sin acceso.
+
+El `+` solo aparece en los edificios que ocupan varias celdas. En uno de una
+sola celda taparía de qué edificio se trata para decir algo que ya se ve.
+
+**Todavía no hay interiores.** El umbral debería tener una salida `entrar` hacia
+adentro, pero una salida sin destino no existe en Evennia, y crear ciento
+setenta y ocho salas idénticas que digan "está oscuro" solo para que el comando
+exista sería peor que no tenerlo. Cuando haya interiores, el `entrar` se agrega
+en el constructor, en el umbral.
+
+### La diagonal se camina en diagonal
+
+La Diagonal Sur avanza una celda en cada eje por paso, así que sus tramos se
+tocan en la esquina y no de lado: no los une la grilla ortogonal. Se recorre con
+`noreste` y `suroeste`. La alternativa —ensancharla en escalera para que la
+grilla la uniera— la dibujaba doble.
+
 ### El agua no es una sala
 
 El lago Toluca, el canal del puente levadizo y las paredes interiores se
@@ -168,7 +196,10 @@ reales** de cada sala. Entre dos celdas contiguas pone un espacio si hay paso y
 un muro si no. Si abrís un pasaje nuevo in-game, el mapa lo refleja sin tocar
 ningún dato.
 
-Un muro solo se dibuja entre dos salas que existen y no se comunican.
+Ya no se dibujan muros entre celdas. Se probó marcar con un bloque los pares
+de salas contiguas sin paso, y el resultado fue un mapa sembrado de manchas
+grises alrededor de cada umbral, que es justo donde nunca hay paso lateral. El
+edificio se ve macizo porque se dibuja macizo.
 
 ### Sobre los caracteres
 

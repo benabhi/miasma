@@ -82,7 +82,7 @@ Cada fase debe quedar jugable antes de empezar la siguiente.
 | Reloj | `TIME_FACTOR = 4.0` | 1 día de juego cada 6 h reales |
 | Época | 1 abr 2033, 06:00 UTC | Fecha canónica, semanas después del Brote |
 | Personajes por cuenta | 1 | Refuerza el peso de la permadeath |
-| Chargen | Obligatorio | La cuenta y el sobreviviente son cosas distintas |
+| Chargen | Pospuesto | Hoy se entra directo: al crear la cuenta se crea el personaje. Vuelve en la fase 1, cuando haya algo que elegir |
 
 ## 5. Preguntas abiertas
 
